@@ -28,10 +28,10 @@ Step
 
 ```ascii
                        ------
-docker image          |      |
+input artifact 1      |      |
 ----------------------|      | output artifact
                       | Step |----------------
-source code directory |      |
+input artifact 2      |      |
 ----------------------|      |
                        ------
 ```
