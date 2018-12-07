@@ -71,11 +71,15 @@ steps:
 
 - name: builder
   image:
-    context: docker/build-image
+    context: src/docker/build-image
+  need:
+    - src
 
 - name: tester
   image:
-    context: docker/tester-image
+    context: src/docker/tester-image
+  need:
+    - src
 
 - name: build
   script: gcc src/hello.c -o $out/hello.exe
