@@ -1,0 +1,30 @@
+---
+steps:
+- name: hello-world-builder
+  action:
+    type: image
+    context: docker/hello-world-builder
+
+- name: hello-world-tester
+  action:
+    type: image
+    context: docker/hello-world-tester
+
+- name: build
+  action:
+    type: script
+    path: src/build.sh
+    platform: hello-world-builder
+    artifacts:
+    - source: .
+      destination: src
+
+- name: test
+  action:
+    type: script
+    path: src/test.sh
+    platform: hello-world-tester
+    artifacts:
+    - source: .
+      destination: src
+    - source: build

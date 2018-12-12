@@ -1,0 +1,6 @@
+.stack-work/
+kevlar.cabal
+*~
+
+_build
+_shake
