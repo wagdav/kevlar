@@ -1,0 +1,15 @@
+---
+steps:
+- name: kevlar-builder
+  action:
+    type: image
+    context: docker/kevlar-builder
+
+- name: build
+  action:
+    type: script
+    path: src/ci/build.sh
+    platform: kevlar-builder
+    artifacts:
+    - source: .
+      destination: src
