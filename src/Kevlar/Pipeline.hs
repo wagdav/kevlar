@@ -3,6 +3,7 @@ module Kevlar.Pipeline where
 
 import           Data.Maybe
 import           GHC.Generics
+import qualified Data.Map.Strict               as Map
 
 type Name = String
 type Platform = String
@@ -25,6 +26,7 @@ data StepAction
     { _stepActionPath         :: FilePath
     , _stepActionPlatform     :: Platform
     , _stepActionArtifacts    :: [Artifact]
+    , _stepActionEnvironment  :: Maybe (Map.Map String String)
     }
   | Image
     { _stepActionContext       :: FilePath
