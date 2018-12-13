@@ -27,6 +27,7 @@ data StepAction
     , _stepActionPlatform     :: Platform
     , _stepActionArtifacts    :: [Artifact]
     , _stepActionEnvironment  :: Maybe (Map.Map String String)
+    , _stepActionCaches       :: Maybe [FilePath]
     }
   | Image
     { _stepActionContext       :: FilePath
