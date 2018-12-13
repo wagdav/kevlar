@@ -56,7 +56,7 @@ mkRules (Step name (Image context)) = do
     version <- gitHash
     need [done version name]
 
-mkRules (Step name (Script script platform artifacts envs)) = do
+mkRules (Step name (Script script platform artifacts envs caches)) = do
   build name %> \out -> do
     let v                     = version out
     let (selfDeps, otherDeps) = partition thisRepo artifacts
@@ -70,6 +70,9 @@ mkRules (Step name (Script script platform artifacts envs)) = do
       $ mapM (makeAbsolute . stepOutput v . artifactSource) selfDeps
     volOthers <- liftIO
       $ mapM (makeAbsolute . stepOutput v . artifactSource) otherDeps
+    volCaches <- liftIO $ mapM
+      makeAbsolute
+      [ "_build" </> "caches" </> show i | i <- [1 .. length caches] ]
 
     let environment = Map.toList (fromMaybe Map.empty envs)
 
@@ -84,6 +87,10 @@ mkRules (Step name (Script script platform artifacts envs)) = do
       , concat
         [ volume vol ("/tmp" </> artifactDestination n) ReadOnly
         | (vol, n) <- zip volOthers otherDeps
+        ]
+      , concat
+        [ volume vol c ReadWrite
+        | (vol, c) <- zip volCaches (fromMaybe [] caches)
         ]
       , volume output "/tmp/output" ReadWrite
       , [platform ++ ":" ++ v, "/tmp" </> script]

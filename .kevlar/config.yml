@@ -13,3 +13,5 @@ steps:
     artifacts:
     - source: .
       destination: src
+    caches:
+      - /root/.stack
