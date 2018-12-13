@@ -2,12 +2,13 @@
 {-# LANGUAGE TypeFamilies #-}
 module Kevlar where
 
-import           Control.Monad                  ( forM )
 import           Data.List                      ( partition )
+import           Data.Maybe
 import           Development.Shake
 import           Development.Shake.Classes
 import           Development.Shake.Command
 import           Development.Shake.FilePath
+import qualified Data.Map.Strict               as Map
 import           System.Directory
 import           System.Exit
 
@@ -55,7 +56,7 @@ mkRules (Step name (Image context)) = do
     version <- gitHash
     need [done version name]
 
-mkRules (Step name (Script script platform artifacts)) = do
+mkRules (Step name (Script script platform artifacts envs)) = do
   build name %> \out -> do
     let v                     = version out
     let (selfDeps, otherDeps) = partition thisRepo artifacts
@@ -70,9 +71,12 @@ mkRules (Step name (Script script platform artifacts)) = do
     volOthers <- liftIO
       $ mapM (makeAbsolute . stepOutput v . artifactSource) otherDeps
 
-    quietly $ cmd_ $ concat
+    let environment = Map.toList (fromMaybe Map.empty envs)
+
+    quietly $ cmd_ [Env environment] $ concat
       [ ["docker", "run", "--rm"]
       , workdir "/tmp"
+      , concat [ ["--env", e] | (e, _) <- environment ]
       , concat
         [ volume here ("/tmp" </> artifactDestination n) ReadWrite
         | (vol, n) <- zip volSelf selfDeps
