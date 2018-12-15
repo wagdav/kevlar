@@ -1,17 +1,16 @@
 ---
-steps:
+artifacts:
+- name: src
+  source: .
+
 - name: kevlar-builder
-  action:
-    type: image
+  docker_image:
     context: docker/kevlar-builder
 
 - name: build
-  action:
-    type: script
-    path: src/ci/build.sh
-    platform: kevlar-builder
-    artifacts:
-    - source: .
-      destination: src
-    caches:
-      - /root/.stack
+  script: src/ci/build.sh
+  need:
+    - src
+    - kevlar-builder
+  caches:
+    - .stack

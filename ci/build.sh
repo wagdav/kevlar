@@ -1,4 +1,3 @@
 #!/bin/sh
 set -ex
-(cd src && stack --allow-different-user install)
-(cd src && stack --allow-different-user exec -- cp "$(which kevlar)" ../output/)
+(cd src && stack install --local-bin-path "$KEVLAR_OUTPUT")
