@@ -2,7 +2,6 @@
 {-# LANGUAGE TypeFamilies #-}
 module Kevlar where
 
-import           Data.List                      ( partition )
 import           Data.Maybe
 import           Development.Shake
 import           Development.Shake.Classes
@@ -11,7 +10,11 @@ import           Development.Shake.FilePath
 import qualified Data.Map.Strict               as Map
 import           System.Directory
 import           System.Exit
+import           System.Posix.User              ( getEffectiveUserID
+                                                , getEffectiveGroupID
+                                                )
 
+import           Kevlar.Artifact
 import           Kevlar.Pipeline
 
 -- Oracle
@@ -44,64 +47,66 @@ rulesOracle = do
   oracleVersion
 
 mkRules :: Step -> Rules ()
-mkRules (Step name (Image context)) = do
-  build name %> \out -> do
-    let v = version out
-    need [context </> "Dockerfile"]
-    askOracle (ContainerId (name ++ ":" ++ v))
-    quietly $ cmd_ ["docker", "build", "--tag", name ++ ":" ++ v, context]
-    writeFileChanged out v
+mkRules (DockerImage name context) = build name %> \out -> do
+  let v = version out
+  getDirectoryFiles context ["//*"]
+  askOracle (ContainerId (name ++ ":" ++ v))
+  quietly $ cmd_ ["docker", "build", "--tag", name ++ ":" ++ v, context]
+  writeFileChanged out (show $ mempty { dockerImage = Last (Just name) })
 
-  phony name $ do
-    version <- gitHash
-    need [done version name]
+mkRules (Source name src) = build name %> \out -> do
+  path <- liftIO $ makeAbsolute src
+  writeFileChanged out (show $ mempty { volumes = [(name, path)] })
 
-mkRules (Step name (Script script platform artifacts envs caches)) = do
-  build name %> \out -> do
-    let v                     = version out
-    let (selfDeps, otherDeps) = partition thisRepo artifacts
-    need $ done v platform : map (done v . artifactSource) otherDeps
-    putNormal $ unwords ["Executing", script, "in", platform]
+mkRules (Environment name e) = build name
+  %> \out -> writeFileChanged out (show $ mempty { envVars = Map.toList e })
 
-    here    <- liftIO $ makeAbsolute "."
-    output  <- liftIO $ makeAbsolute $ stepOutput v name
+mkRules (Script name script caches needs) = build name %> \out -> do
+  let v = version out
+  artifacts <- getInputArtifact v needs
 
-    volSelf <- liftIO
-      $ mapM (makeAbsolute . stepOutput v . artifactSource) selfDeps
-    volOthers <- liftIO
-      $ mapM (makeAbsolute . stepOutput v . artifactSource) otherDeps
-    volCaches <- liftIO $ mapM
-      makeAbsolute
-      [ "_build" </> "caches" </> show i | i <- [1 .. length caches] ]
+  volCaches <- liftIO $ mapM
+    makeAbsolute
+    [ "_build" </> "caches" </> show i | i <- [1 .. length caches] ]
+  liftIO $ mapM (createDirectoryIfMissing True) volCaches
 
-    let environment = Map.toList (fromMaybe Map.empty envs)
+  let platform = fromJust . getLast $ dockerImage artifacts
+  putNormal $ unwords ["Executing", script, "in", platform]
 
-    quietly $ cmd_ [Env environment] $ concat
-      [ ["docker", "run", "--rm"]
-      , workdir "/tmp"
-      , concat [ ["--env", e] | (e, _) <- environment ]
-      , concat
-        [ volume here ("/tmp" </> artifactDestination n) ReadWrite
-        | (vol, n) <- zip volSelf selfDeps
-        ]
-      , concat
-        [ volume vol ("/tmp" </> artifactDestination n) ReadOnly
-        | (vol, n) <- zip volOthers otherDeps
-        ]
-      , concat
-        [ volume vol c ReadWrite
-        | (vol, c) <- zip volCaches (fromMaybe [] caches)
-        ]
-      , volume output "/tmp/output" ReadWrite
-      , [platform ++ ":" ++ v, "/tmp" </> script]
+  outputHost <- liftIO $ makeAbsolute $ stepOutput v name
+  liftIO $ createDirectoryIfMissing True outputHost
+
+  let workdir = "/tmp/kevlar"
+  let output  = workdir </> "output"
+  let env = envVars artifacts ++ [("HOME", workdir), ("KEVLAR_OUTPUT", output)]
+
+  uid <- liftIO getEffectiveUserID
+  gid <- liftIO getEffectiveGroupID
+
+  withTempDir $ \wkHost -> quietly $ cmd_ [Env env] $ concat
+    [ ["docker", "run", "--rm"]
+    , ["--user", show uid ++ ":" ++ show gid]
+    , ["--workdir", workdir]
+    , concat [ ["--env", e] | (e, _) <- env ]
+    , volume wkHost workdir ReadWrite
+    , concat
+      [ volume hostPath (workdir </> name) ReadWrite
+      | (name, hostPath) <- volumes artifacts
       ]
+    , concat
+      [ volume vol (makeAbsoluteIfRelative workdir c) ReadWrite
+      | (vol, c) <- zip volCaches caches
+      ]
+    , volume outputHost output ReadWrite
+    , [platform ++ ":" ++ v, workdir </> script]
+    ]
 
-    writeFileChanged out v
+  writeFileChanged out (show $ mempty { volumes = [(name, outputHost)] })
 
-  phony name $ do
-    version <- gitHash
-    need [done version name]
-  where workdir path = ["--workdir", path]
+getInputArtifact :: String -> [String] -> Action Artifact
+getInputArtifact version names = do
+  contents <- mapM (readFile' . done version) names
+  return $ mconcat (map read contents)
 
 data VolumeOption
   = ReadOnly
@@ -116,10 +121,12 @@ volume :: FilePath -> FilePath -> VolumeOption -> [String]
 volume local remote opt =
   ["--volume", local ++ ":" ++ remote ++ ":" ++ volumeOption opt]
 
+makeAbsoluteIfRelative base path =
+  if isRelative path then base </> path else path
+
 -- build parameters
-buildVersion v f = "_build" </> v </> f
-done v name = buildVersion v $ name </> "done"
-stepOutput v name = buildVersion v $ name </> "output"
+done version name = "_build" </> ".kevlar-work" </> version </> name ++ ".done"
+stepOutput version name = "_build" </> "artifacts" </> version </> name
 build = done "*"
 
-version = takeDirectory1 . dropDirectory1
+version = takeBaseName . takeDirectory
