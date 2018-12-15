@@ -1,32 +1,31 @@
 ---
-steps:
+artifacts:
+- name: src
+  source: .
+
 - name: hello-world-builder
-  action:
-    type: image
+  docker_image:
     context: docker/hello-world-builder
 
 - name: hello-world-tester
-  action:
-    type: image
+  docker_image:
     context: docker/hello-world-tester
 
 - name: build
-  action:
-    type: script
-    path: src/build.sh
-    platform: hello-world-builder
-    artifacts:
-    - source: .
-      destination: src
+  script: src/build.sh
+  need:
+    - hello-world-builder
+    - src
+
+- name: env
+  environment:
+    HELLO: world
 
 - name: test
-  action:
-    type: script
-    path: src/test.sh
-    platform: hello-world-tester
-    artifacts:
-    - source: .
-      destination: src
-    - source: build
-    environment:
-      HELLO: world
+  script: src/test.sh
+  platform: hello-world-tester
+  need:
+    - src
+    - build
+    - hello-world-tester
+    - env
