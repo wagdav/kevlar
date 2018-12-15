@@ -1,54 +1,35 @@
-{-# LANGUAGE DeriveGeneric #-}
 module Kevlar.Pipeline where
 
 import           Data.Maybe
-import           GHC.Generics
 import qualified Data.Map.Strict               as Map
 
 type Name = String
 type Platform = String
+type Url = String
 
 data Pipeline
   = Pipeline
     { steps :: [Step]
     }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show)
 
 data Step
-  = Step
-    { _stepName   :: Name
-    , _stepAction :: StepAction
-    }
-  deriving (Eq, Show, Generic)
-
-data StepAction
   = Script
-    { _stepActionPath         :: FilePath
-    , _stepActionPlatform     :: Platform
-    , _stepActionArtifacts    :: [Artifact]
-    , _stepActionEnvironment  :: Maybe (Map.Map String String)
-    , _stepActionCaches       :: Maybe [FilePath]
+    { name      :: Name
+    , script    :: FilePath
+    , caches    :: [FilePath]
+    , _need     :: [Name]
     }
-  | Image
-    { _stepActionContext       :: FilePath
+  | Environment
+    { name   :: Name
+    , environment :: Map.Map String String
     }
-  deriving (Eq, Show, Generic)
-
-
-data Artifact
-  = Artifact
-  { _artifactSource         :: String
-  , _artifactDestination    :: Maybe String
-  }
-  deriving (Eq, Show, Generic)
-
-
-artifactSource :: Artifact -> String
-artifactSource = _artifactSource
-
-artifactDestination :: Artifact -> String
-artifactDestination a = fromMaybe (artifactSource a) (_artifactDestination a)
-
-thisRepo :: Artifact -> Bool
-thisRepo (Artifact "." _) = True
-thisRepo _                = False
+  | DockerImage
+    { name   :: Name
+    , context :: FilePath
+    }
+  | Source
+    { name   :: Name
+    , source :: Url
+    }
+  deriving (Eq, Show)
