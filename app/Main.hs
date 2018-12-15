@@ -4,7 +4,7 @@ import           Kevlar
 import           Kevlar.Pipeline
 import           Kevlar.Yaml
 
-import Control.Monad (mapM_)
+import           Control.Monad                  ( forM_ )
 
 import           Development.Shake
 
@@ -13,8 +13,17 @@ main = shakeArgs shakeOptions { shakeFiles = "_build" } $ do
   rulesOracle
 
   phony "clean" $ do
-    putNormal "Cleaning files in _build"
+    putNormal "Cleaning artifacts in _build"
+    removeFilesAfter "_build/artifacts" ["//*"]
+
+  phony "purge" $ do
+    putNormal "Removing _build"
     removeFilesAfter "_build" ["//*"]
 
   pipeline <- liftIO $ readPipeline ".kevlar/config.yml"
-  mapM_ mkRules (steps pipeline)
+  forM_ (steps pipeline) $ \step -> do
+    mkRules step
+
+    phony (name step) $ do
+      version <- gitHash
+      need [done version (name step)]
