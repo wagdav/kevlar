@@ -51,4 +51,6 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - kevlar
+    - bytestring
     - hspec
+    - raw-strings-qq

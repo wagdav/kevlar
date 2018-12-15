@@ -1,46 +1,33 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Kevlar.Yaml where
 
+import           Data.Foldable                  ( asum )
 import           Data.Aeson.Types
-import           Data.Char                     as Char
-import           Data.Yaml                     as Y
+import qualified Data.Yaml                     as Y
 
 import           Kevlar.Pipeline
 
--- FromJSON instances
 instance FromJSON Pipeline where
-  parseJSON = genericParseJSON options
+  parseJSON = withObject "pipeline" $ \o ->
+    Pipeline <$> o .: "artifacts"
 
 instance FromJSON Step where
-  parseJSON = genericParseJSON options { fieldLabelModifier = strip "_step" }
+  parseJSON = withObject "step" $ \o -> asum
+    [ Script <$> o .:  "name"
+             <*> o .:  "script"
+             <*> o .:? "caches" .!= []
+             <*> o .:? "need"   .!= []
 
-instance FromJSON StepAction where
-  parseJSON = genericParseJSON options { fieldLabelModifier = strip "_stepAction" }
+    , {- DockerImage -} do
+        name    <- o.: "name"
+        argsO   <- o .: "docker_image"
+        context <- argsO .: "context"
+        return $ DockerImage name context
 
-instance FromJSON Artifact where
-  parseJSON = genericParseJSON options { fieldLabelModifier = strip "_artifact" }
+    , Environment <$> o .: "name" <*> o .: "environment"
 
--- ToJSON instances
-instance ToJSON Pipeline where
-  toJSON = genericToJSON options
-
-instance ToJSON Step where
-  toJSON = genericToJSON options { fieldLabelModifier = strip "_step" }
-
-instance ToJSON StepAction where
-  toJSON = genericToJSON options { fieldLabelModifier = strip "_stepAction" }
-
-instance ToJSON Artifact where
-  toJSON = genericToJSON options { fieldLabelModifier = strip "_artifact" }
-
-options :: Options
-options = defaultOptions { sumEncoding = TaggedObject "type" "contents"
-                         , constructorTagModifier = fmap Char.toLower
-                         , omitNothingFields = True
-                         }
-
-strip :: String -> String -> String
-strip s = fmap Char.toLower . drop (length s)
+    , Source <$> o .: "name" <*> o .: "source"
+    ]
 
 readPipeline :: FilePath -> IO Pipeline
-readPipeline = decodeFileThrow
+readPipeline = Y.decodeFileThrow
