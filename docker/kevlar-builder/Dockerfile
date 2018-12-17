@@ -15,3 +15,8 @@ RUN mkdir -p ${STACK_DIR}
 RUN curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz \
   | tar xz --wildcards --strip-components=1 -C ${STACK_DIR} '*/stack'
 ENV PATH="${STACK_DIR}:${PATH}"
+
+# workaround described in
+# https://www.fpcomplete.com/blog/2016/10/static-compilation-with-stack
+RUN (cd /usr/lib/gcc/x86_64-linux-gnu/8  \
+    && mv crtbeginS.o crtbeginT.o --backup --suffix=.orig)
