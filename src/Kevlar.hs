@@ -47,7 +47,7 @@ rulesOracle = do
   oracleVersion
 
 mkRules :: Step -> Rules ()
-mkRules (DockerImage name context) = build name %> \out -> do
+mkRules (DockerImage name context needs) = build name %> \out -> do
   let v = version out
   getDirectoryFiles context ["//*"]
   askOracle (ContainerId (name ++ ":" ++ v))

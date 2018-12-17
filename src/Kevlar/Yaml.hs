@@ -19,10 +19,11 @@ instance FromJSON Step where
              <*> o .:? "need"   .!= []
 
     , {- DockerImage -} do
-        name    <- o.: "name"
-        argsO   <- o .: "docker_image"
-        context <- argsO .: "context"
-        return $ DockerImage name context
+        name    <- o .:  "name"
+        need    <- o .:? "need" .!= []
+        argsO   <- o .:  "docker_image"
+        context <- argsO .:  "context"
+        return $ DockerImage name context need
 
     , Environment <$> o .: "name" <*> o .: "environment"
 

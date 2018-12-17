@@ -26,6 +26,7 @@ dockerImageYaml = [r|
 name: myimage
 docker_image:
   context: src/docker/myimage
+need: ["src"]
 |]
 
 environmentYaml :: ByteString
@@ -49,7 +50,7 @@ spec = describe "YAML parser" $ do
 
   it "should parse docker_image" $ do
     script <- Y.decodeThrow dockerImageYaml
-    script `shouldBe` DockerImage "myimage" "src/docker/myimage"
+    script `shouldBe` DockerImage "myimage" "src/docker/myimage" ["src"]
 
   it "should parse environment" $ do
     script <- Y.decodeThrow environmentYaml

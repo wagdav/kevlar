@@ -21,12 +21,13 @@ data Step
     , _need     :: [Name]
     }
   | Environment
-    { name   :: Name
+    { name        :: Name
     , environment :: Map.Map String String
     }
   | DockerImage
-    { name   :: Name
+    { name    :: Name
     , context :: FilePath
+    , _need   :: [Name]
     }
   | Source
     { name   :: Name
