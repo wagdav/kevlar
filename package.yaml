@@ -1,7 +1,7 @@
 name:                kevlar
 version:             0.1.0.0
 github:              "wagdav/kevlar"
-license:             GPL-3.0-or-later
+license:             GPL-3
 author:              "David Wagner"
 maintainer:          "wagdav@gmail.com"
 copyright:           "2018 David Wagner"
