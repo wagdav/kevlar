@@ -5,11 +5,15 @@ artifacts:
 
 - name: hello-world-builder
   docker_image:
-    context: docker/hello-world-builder
+    context: src/docker/hello-world-builder
+  need:
+    - src
 
 - name: hello-world-tester
   docker_image:
-    context: docker/hello-world-tester
+    context: src/docker/hello-world-tester
+  need:
+    - src
 
 - name: build
   script: src/build.sh

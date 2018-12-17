@@ -5,7 +5,9 @@ artifacts:
 
 - name: kevlar-builder
   docker_image:
-    context: docker/kevlar-builder
+    context: src/docker/kevlar-builder
+  need:
+    - src
 
 - name: build
   script: src/ci/build.sh
