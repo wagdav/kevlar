@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 module Kevlar where
 
+import           Control.Monad
 import           Data.Maybe
 import           Development.Shake
 import           Development.Shake.Classes
@@ -49,9 +50,16 @@ rulesOracle = do
 mkRules :: Step -> Rules ()
 mkRules (DockerImage name context needs) = build name %> \out -> do
   let v = version out
-  getDirectoryFiles context ["//*"]
+
+  -- try to find the volume that contains the referenced context
+  artifacts <- getInputArtifact v needs
+  let base = lookup (takeDirectory1 context) (volumes artifacts)
+  unless (isJust base) $ fail "Cannot find the specified context"
+  let context' = fromJust base </> dropDirectory1 context
+
+  getDirectoryFiles context' ["//*"]
   askOracle (ContainerId (name ++ ":" ++ v))
-  quietly $ cmd_ ["docker", "build", "--tag", name ++ ":" ++ v, context]
+  quietly $ cmd_ ["docker", "build", "--tag", name ++ ":" ++ v, context']
   writeFileChanged out (show $ mempty { dockerImage = Last (Just name) })
 
 mkRules (Source name src) = build name %> \out -> do
