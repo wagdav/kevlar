@@ -16,3 +16,22 @@ artifacts:
     - kevlar-builder
   caches:
     - .stack
+
+- name: publish
+  script: src/ci/publish.sh
+  need:
+    - src
+    - build
+    - publish.docker
+    - publish.secrets
+
+- name: publish.docker
+  docker_image:
+    context: src/docker/kevlar-publish
+  need:
+    - src
+
+# The secrets are looked up using the 'pass' password manager.
+- name: publish.secrets
+  secrets:
+    GITHUB_ACCESS_TOKEN: api/github.com/kevlar-deployment
