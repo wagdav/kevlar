@@ -79,7 +79,7 @@ mkRules (Source name src) = build name %> \out -> do
           cmd_ [Cwd repo] ["git", "fetch"]
           cmd_ [Cwd repo] ["git", "reset", "origin/master"]
           cmd_ [Cwd repo] ["git", "checkout", "master"]
-        else cmd_ ["git", "clone", src, repo]
+        else cmd_ ["git", "clone", "--recursive", src, repo]
       return repo
 
   writeFileChanged out (show $ mempty { volumes = [(name, path)] })
