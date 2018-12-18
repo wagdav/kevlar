@@ -9,7 +9,9 @@ import           Development.Shake.Classes
 import           Development.Shake.Command
 import           Development.Shake.FilePath
 import qualified Data.Map.Strict               as Map
-import           System.Directory
+import           System.Directory               ( createDirectoryIfMissing
+                                                , makeAbsolute
+                                                )
 import           System.Exit
 import           System.Posix.User              ( getEffectiveUserID
                                                 , getEffectiveGroupID
@@ -63,7 +65,23 @@ mkRules (DockerImage name context needs) = build name %> \out -> do
   writeFileChanged out (show $ mempty { dockerImage = Last (Just name) })
 
 mkRules (Source name src) = build name %> \out -> do
-  path <- liftIO $ makeAbsolute src
+  let v = version out
+  path <- if src == "."
+    then liftIO $ makeAbsolute src
+    else do
+      repo   <- liftIO $ makeAbsolute $ stepOutput v name
+      exists <- doesDirectoryExist repo
+      if exists
+        then do
+          -- Assume that this is directory is already a git checkout.  Refresh
+          -- the repository by following the instructions from
+          -- https://stackoverflow.com/q/2411031
+          cmd_ [Cwd repo] ["git", "fetch"]
+          cmd_ [Cwd repo] ["git", "reset", "origin/master"]
+          cmd_ [Cwd repo] ["git", "checkout", "master"]
+        else cmd_ ["git", "clone", src, repo]
+      return repo
+
   writeFileChanged out (show $ mempty { volumes = [(name, path)] })
 
 mkRules (Environment name e) = build name
