@@ -83,9 +83,9 @@ mkRules (Source name src) = build name %> \out -> do
           -- Assume that this is directory is already a git checkout.  Refresh
           -- the repository by following the instructions from
           -- https://stackoverflow.com/q/2411031
-          cmd_ [Cwd repo] ["git", "fetch"]
-          cmd_ [Cwd repo] ["git", "reset", "origin/master"]
-          cmd_ [Cwd repo] ["git", "checkout", "master"]
+          quietly $ cmd_ [Cwd repo] ["git", "fetch"]
+          quietly $ cmd_ [Cwd repo] ["git", "reset", "origin/master"]
+          quietly $ cmd_ [Cwd repo] ["git", "checkout", "master"]
         else cmd_ ["git", "clone", "--recursive", src, repo]
       return repo
 
