@@ -56,7 +56,6 @@ rulesOracle = do
 mkRules :: Step -> Rules ()
 mkRules (DockerImage name context needs) = build name %> \out -> do
   v <- gitHash
-  askOracle (ContainerId (name ++ ":" ++ v))
 
   -- try to find the volume that contains the referenced context
   artifacts <- getInputArtifact v needs
