@@ -3,6 +3,7 @@
 module Kevlar where
 
 import           Control.Monad
+import           Data.List                      ( stripPrefix )
 import           Data.Maybe
 import           Development.Shake
 import           Development.Shake.Classes
@@ -31,6 +32,9 @@ type instance RuleResult GitHash = String
 
 strip = filter (/= '\n')
 
+hashValue :: String -> String
+hashValue x = strip $ fromMaybe x (stripPrefix "sha256:" x)
+
 -- oracles
 oracleImage = addOracle $ \(ContainerId name) -> do
   (Exit c, Stdout out) <- quietly
@@ -51,7 +55,8 @@ rulesOracle = do
 
 mkRules :: Step -> Rules ()
 mkRules (DockerImage name context needs) = build name %> \out -> do
-  let v = version out
+  v <- gitHash
+  askOracle (ContainerId (name ++ ":" ++ v))
 
   -- try to find the volume that contains the referenced context
   artifacts <- getInputArtifact v needs
@@ -60,12 +65,15 @@ mkRules (DockerImage name context needs) = build name %> \out -> do
   let context' = fromJust base </> dropDirectory1 context
 
   getDirectoryFiles context' ["//*"]
-  askOracle (ContainerId (name ++ ":" ++ v))
-  quietly $ cmd_ ["docker", "build", "--tag", name ++ ":" ++ v, context']
-  writeFileChanged out (show $ mempty { dockerImage = Last (Just name) })
+  withTempFile $ \iidfile -> do
+    cmd_ ["docker", "build", "--iidfile", iidfile, context']
+    imageId <- liftIO $ hashValue <$> readFile iidfile
+    writeFileChanged
+      out
+      (show $ mempty { dockerImage = Last $ Just (name, imageId) })
 
 mkRules (Source name src) = build name %> \out -> do
-  let v = version out
+  v    <- gitHash
   path <- if src == "."
     then liftIO $ makeAbsolute src
     else do
@@ -88,7 +96,7 @@ mkRules (Environment name e) = build name
   %> \out -> writeFileChanged out (show $ mempty { envVars = Map.toList e })
 
 mkRules (Script name script caches needs) = build name %> \out -> do
-  let v = version out
+  v         <- gitHash
   artifacts <- getInputArtifact v needs
 
   volCaches <- liftIO $ mapM
@@ -96,8 +104,8 @@ mkRules (Script name script caches needs) = build name %> \out -> do
     [ "_build" </> "caches" </> show i | i <- [1 .. length caches] ]
   liftIO $ mapM (createDirectoryIfMissing True) volCaches
 
-  let platform = fromJust . getLast $ dockerImage artifacts
-  putNormal $ unwords ["Executing", script, "in", platform]
+  let (imageName, imageId) = fromJust . getLast $ dockerImage artifacts
+  putNormal $ unwords ["Executing", script, "in", imageName]
 
   outputHost <- liftIO $ makeAbsolute $ stepOutput v name
   liftIO $ createDirectoryIfMissing True outputHost
@@ -109,6 +117,7 @@ mkRules (Script name script caches needs) = build name %> \out -> do
   uid <- liftIO getEffectiveUserID
   gid <- liftIO getEffectiveGroupID
 
+  cmd_ ["docker", "tag", imageId, imageName ++ ":" ++ v]
   withTempDir $ \wkHost -> quietly $ cmd_ [Env env] $ concat
     [ ["docker", "run", "--rm"]
     , ["--user", show uid ++ ":" ++ show gid]
@@ -124,14 +133,14 @@ mkRules (Script name script caches needs) = build name %> \out -> do
       | (vol, c) <- zip volCaches caches
       ]
     , volume outputHost output ReadWrite
-    , [platform ++ ":" ++ v, workdir </> script]
+    , [imageId, workdir </> script]
     ]
 
   writeFileChanged out (show $ mempty { volumes = [(name, outputHost)] })
 
 getInputArtifact :: String -> [String] -> Action Artifact
 getInputArtifact version names = do
-  contents <- mapM (readFile' . done version) names
+  contents <- mapM (readFile' . build) names
   return $ mconcat (map read contents)
 
 data VolumeOption
@@ -151,8 +160,5 @@ makeAbsoluteIfRelative base path =
   if isRelative path then base </> path else path
 
 -- build parameters
-done version name = "_build" </> ".kevlar-work" </> version </> name ++ ".done"
+build name = "_build" </> ".kevlar-work" </> name ++ ".done"
 stepOutput version name = "_build" </> "artifacts" </> version </> name
-build = done "*"
-
-version = takeBaseName . takeDirectory

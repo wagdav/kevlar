@@ -24,6 +24,4 @@ main = shakeArgs shakeOptions { shakeFiles = "_build" } $ do
   forM_ (steps pipeline) $ \step -> do
     mkRules step
 
-    phony (name step) $ do
-      version <- gitHash
-      need [done version (name step)]
+    phony (name step) $ need [build (name step)]

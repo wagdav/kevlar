@@ -6,14 +6,14 @@ where
 
 import           Data.Monoid
 
-type DockerImage = String
+type DockerImageId = String
 type Environment = [(String, String)]
 type Volume = (String, FilePath)
 
 data Artifact
   = Artifact
   { volumes :: [Volume]
-  , dockerImage :: Last DockerImage
+  , dockerImage :: Last (String, DockerImageId)
   , envVars :: Environment
   }
  deriving (Show, Eq, Read)
