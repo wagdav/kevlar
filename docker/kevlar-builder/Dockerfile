@@ -1,4 +1,4 @@
-FROM ubuntu:18.10
+FROM ubuntu:18.04
 
 RUN apt-get update && apt-get install -y\
     build-essential \
@@ -18,5 +18,5 @@ ENV PATH="${STACK_DIR}:${PATH}"
 
 # workaround described in
 # https://www.fpcomplete.com/blog/2016/10/static-compilation-with-stack
-RUN (cd /usr/lib/gcc/x86_64-linux-gnu/8  \
+RUN (cd /usr/lib/gcc/x86_64-linux-gnu/7  \
     && mv crtbeginS.o crtbeginT.o --backup --suffix=.orig)
