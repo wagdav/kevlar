@@ -30,6 +30,10 @@ newtype GitHash = GitHash ()
   deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
 type instance RuleResult GitHash = String
 
+newtype PassSecret = PassSecret String
+  deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+type instance RuleResult PassSecret = Maybe String
+
 strip = filter (/= '\n')
 
 hashValue :: String -> String
@@ -47,11 +51,19 @@ oracleVersion = addOracle $ \GitHash{} -> do
   Stdout stdout <- quietly $ cmd "git describe --always --dirty"
   return $ strip stdout
 
+-- Look up a specified secret using the password manager 'pass'
+oraclePass = addOracle $ \(PassSecret passName) -> do
+  (Exit c, Stdout out) <- quietly $ cmd ["pass", "show", passName]
+  return $ case c of
+    ExitSuccess   -> Just (strip out)
+    ExitFailure _ -> Nothing
+
 gitHash = askOracle $ GitHash ()
 
 rulesOracle = do
   oracleImage
   oracleVersion
+  oraclePass
 
 mkRules :: Step -> Rules ()
 mkRules (DockerImage name context needs) = build name %> \out -> do
@@ -112,9 +124,21 @@ mkRules (Script name script caches needs) = build name %> \out -> do
   outputHost <- liftIO $ makeAbsolute $ stepOutput v name
   liftIO $ createDirectoryIfMissing True outputHost
 
+  secrets <-
+    mapM
+        (\(name, path) -> do
+          value <- askOracle (PassSecret path)
+          unless (isJust value) $ fail ("Couldn't find the secret: " ++ path)
+          return (name, fromJust value)
+        )
+      $ artifactSecrets artifacts
+
   let workdir = "/tmp/kevlar"
   let output  = workdir </> "output"
-  let env = envVars artifacts ++ [("HOME", workdir), ("KEVLAR_OUTPUT", output)]
+  let env =
+        envVars artifacts
+          ++ [("HOME", workdir), ("KEVLAR_OUTPUT", output)]
+          ++ secrets
 
   uid <- liftIO getEffectiveUserID
   gid <- liftIO getEffectiveGroupID
