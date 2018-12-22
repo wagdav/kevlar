@@ -28,6 +28,8 @@ instance FromJSON Step where
     , Environment <$> o .: "name" <*> o .: "environment"
 
     , Source <$> o .: "name" <*> o .: "source"
+
+    , Secrets <$> o .: "name" <*> o .: "secrets"
     ]
 
 readPipeline :: FilePath -> IO Pipeline

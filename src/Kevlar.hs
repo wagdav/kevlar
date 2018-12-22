@@ -94,6 +94,9 @@ mkRules (Source name src) = build name %> \out -> do
 mkRules (Environment name e) = build name
   %> \out -> writeFileChanged out (show $ mempty { envVars = Map.toList e })
 
+mkRules (Secrets name e) = build name %> \out ->
+  writeFileChanged out (show $ mempty { artifactSecrets = Map.toList e })
+
 mkRules (Script name script caches needs) = build name %> \out -> do
   v         <- gitHash
   artifacts <- getInputArtifact v needs

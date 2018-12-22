@@ -33,4 +33,8 @@ data Step
     { name   :: Name
     , source :: Url
     }
+  | Secrets
+    { name        :: Name
+    , secrets     :: Map.Map String String
+    }
   deriving (Eq, Show)

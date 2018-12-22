@@ -43,6 +43,13 @@ name: src
 source: http://example.com
 |]
 
+secretsYaml :: ByteString
+secretsYaml = [r|
+name: mysecrets
+secrets:
+  API_KEY: /api/deploy_key
+|]
+
 spec = describe "YAML parser" $ do
   it "should parse script" $ do
     script <- Y.decodeThrow scriptYaml
@@ -61,3 +68,8 @@ spec = describe "YAML parser" $ do
   it "should parse source" $ do
     script <- Y.decodeThrow sourceYaml
     script `shouldBe` Source "src" "http://example.com"
+
+  it "should parse secrets block" $ do
+    script <- Y.decodeThrow secretsYaml
+    script `shouldBe` Secrets "mysecrets"
+      (Map.fromList [("API_KEY", "/api/deploy_key")])
