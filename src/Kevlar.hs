@@ -137,7 +137,10 @@ mkRules (Script name script caches needs) = build name %> \out -> do
   let output  = workdir </> "output"
   let env =
         envVars artifacts
-          ++ [("HOME", workdir), ("KEVLAR_OUTPUT", output)]
+          ++ [ ("HOME"          , workdir)
+             , ("KEVLAR_OUTPUT" , output)
+             , ("KEVLAR_VERSION", v)
+             ]
           ++ secrets
 
   uid <- liftIO getEffectiveUserID
