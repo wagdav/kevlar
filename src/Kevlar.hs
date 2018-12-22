@@ -71,9 +71,7 @@ mkRules (DockerImage name context needs) = build name %> \out -> do
 
   -- try to find the volume that contains the referenced context
   artifacts <- getInputArtifact v needs
-  let base = lookup (takeDirectory1 context) (volumes artifacts)
-  unless (isJust base) $ fail "Cannot find the specified context"
-  let context' = fromJust base </> dropDirectory1 context
+  let context' = fromJust $ findPathInVolumes context (volumes artifacts)
 
   getDirectoryFiles context' ["//*"]
   withTempFile $ \iidfile -> do
@@ -112,6 +110,8 @@ mkRules (Secrets name e) = build name %> \out ->
 mkRules (Script name script caches needs) = build name %> \out -> do
   v         <- gitHash
   artifacts <- getInputArtifact v needs
+
+  need [fromJust $ findPathInVolumes script (volumes artifacts)]
 
   volCaches <- liftIO $ mapM
     makeAbsolute
@@ -184,6 +184,11 @@ volumeOption ReadWrite = "rw"
 volume :: FilePath -> FilePath -> VolumeOption -> [String]
 volume local remote opt =
   ["--volume", local ++ ":" ++ remote ++ ":" ++ volumeOption opt]
+
+-- Try to find the volume that contains the referenced path
+findPathInVolumes :: FilePath -> [Volume] -> Maybe FilePath
+findPathInVolumes p volumes =
+  (</> dropDirectory1 p) <$> lookup (takeDirectory1 p) volumes
 
 makeAbsoluteIfRelative base path =
   if isRelative path then base </> path else path

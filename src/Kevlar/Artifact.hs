@@ -1,6 +1,7 @@
 module Kevlar.Artifact
   ( Artifact(..)
   , Last(..)
+  , Volume
   )
 where
 
