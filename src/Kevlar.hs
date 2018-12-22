@@ -146,7 +146,7 @@ mkRules (Script name script caches needs) = build name %> \out -> do
   uid <- liftIO getEffectiveUserID
   gid <- liftIO getEffectiveGroupID
 
-  cmd_ ["docker", "tag", imageId, imageName ++ ":" ++ v]
+  quietly $ cmd_ ["docker", "tag", imageId, imageName ++ ":" ++ v]
   withTempDir $ \wkHost -> quietly $ cmd_ [Env env] $ concat
     [ ["docker", "run", "--rm"]
     , ["--user", show uid ++ ":" ++ show gid]
