@@ -8,6 +8,9 @@ import           Control.Monad                  ( forM_ )
 
 import           Development.Shake
 
+kevlarConfig :: FilePath
+kevlarConfig = ".kevlar/config.yml"
+
 main :: IO ()
 main = shakeArgs shakeOptions { shakeFiles = "_build" } $ do
   rulesOracle
@@ -20,8 +23,8 @@ main = shakeArgs shakeOptions { shakeFiles = "_build" } $ do
     putNormal "Removing _build"
     removeFilesAfter "_build" ["//*"]
 
-  pipeline <- liftIO $ readPipeline ".kevlar/config.yml"
+  pipeline <- liftIO $ readPipeline kevlarConfig
   forM_ (steps pipeline) $ \step -> do
     mkRules step
 
-    phony (name step) $ need [build (name step)]
+    phony (name step) $ need [kevlarConfig, build (name step)]
