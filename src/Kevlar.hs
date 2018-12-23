@@ -3,7 +3,9 @@
 module Kevlar where
 
 import           Control.Monad
-import           Data.List                      ( stripPrefix )
+import           Data.List                      ( stripPrefix
+                                                , filter
+                                                )
 import           Data.Maybe
 import           Development.Shake
 import           Development.Shake.Classes
@@ -20,6 +22,7 @@ import           System.Posix.User              ( getEffectiveUserID
 
 import           Kevlar.Artifact
 import           Kevlar.Pipeline
+import qualified Kevlar.Nomad                  as Nomad
 
 -- Oracle
 newtype ContainerId = ContainerId String
@@ -147,23 +150,35 @@ mkRules (Script name script caches needs) = build name %> \out -> do
   gid <- liftIO getEffectiveGroupID
 
   quietly $ cmd_ ["docker", "tag", imageId, imageName ++ ":" ++ v]
-  withTempDir $ \wkHost -> quietly $ cmd_ [Env env] $ concat
-    [ ["docker", "run", "--rm"]
-    , ["--user", show uid ++ ":" ++ show gid]
-    , ["--workdir", workdir]
-    , concat [ ["--env", e] | (e, _) <- env ]
-    , volume wkHost workdir ReadWrite
-    , concat
-      [ volume hostPath (workdir </> name) ReadWrite
-      | (name, hostPath) <- volumes artifacts
+
+  withTempDir $ \wkHost -> do
+    let volArgs = concat
+          [ volume wkHost workdir ReadWrite
+          , concat
+            [ volume hostPath (workdir </> name) ReadWrite
+            | (name, hostPath) <- volumes artifacts
+            ]
+          , concat
+            [ volume vol (makeAbsoluteIfRelative workdir c) ReadWrite
+            | (vol, c) <- zip volCaches caches
+            ]
+          , volume outputHost output ReadWrite
+          ]
+    quietly $ cmd_ [Env env] $ concat
+      [ ["docker", "run", "--rm"]
+      , ["--user", show uid ++ ":" ++ show gid]
+      , ["--workdir", workdir]
+      , concat [ ["--env", e] | (e, _) <- env ]
+      , volArgs
+      , [imageId, workdir </> script]
       ]
-    , concat
-      [ volume vol (makeAbsoluteIfRelative workdir c) ReadWrite
-      | (vol, c) <- zip volCaches caches
-      ]
-    , volume outputHost output ReadWrite
-    , [imageId, workdir </> script]
-    ]
+
+    liftIO $ Nomad.writeJob "build.json" $ Nomad.mkJob
+      name
+      (imageName ++ ":" ++ v)
+      (workdir </> script)
+      (filter (/= "--volume") volArgs)
+      workdir
 
   writeFileChanged out (show $ mempty { volumes = [(name, outputHost)] })
 
@@ -183,7 +198,7 @@ volumeOption ReadWrite = "rw"
 
 volume :: FilePath -> FilePath -> VolumeOption -> [String]
 volume local remote opt =
-  ["--volume", local ++ ":" ++ remote ++ ":" ++ volumeOption opt]
+  ["--volume", local ++ ":" ++ remote]
 
 -- Try to find the volume that contains the referenced path
 findPathInVolumes :: FilePath -> [Volume] -> Maybe FilePath

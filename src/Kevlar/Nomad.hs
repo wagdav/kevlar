@@ -1,5 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
-module Kevlar.Nomad where
+module Kevlar.Nomad
+  ( mkJob
+  , Job
+  , writeJob
+  )
+where
 
 import           Data.Aeson                     ( encode )
 import           Data.Aeson.Types
@@ -43,6 +48,8 @@ data TaskConfig
   = TaskConfig
   { taskConfigImage :: String
   , taskConfigCommand :: String
+  , taskConfigVolumes :: [String]
+  , taskConfigWork_dir :: FilePath
   }
  deriving (Show, Eq, Generic)
 
@@ -66,14 +73,12 @@ instance ToJSON TaskConfig where
 strip :: String -> String -> String
 strip s = drop (length s)
 
-simpleTask :: Job
-simpleTask = Job "example"
-                 "example"
-                 "batch"
-                 ["dc1"]
-                 [TaskGroup "example" 1 [task]]
- where
-  task = Task "redis" "docker" (TaskConfig "hello-world-builder:e25773f" "ls")
+mkJob name image command volumes workDir = Job name  -- id
+                                               name  -- name
+                                               "batch"
+                                               ["dc1"]
+                                               [TaskGroup name 1 [task]]
+  where task = Task name "docker" (TaskConfig image command volumes workDir)
 
 writeJob :: FilePath -> Job -> IO ()
 writeJob p j = B.writeFile p (encode $ Nomad j)
