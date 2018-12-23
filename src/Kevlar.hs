@@ -197,8 +197,7 @@ volumeOption ReadOnly  = "ro"
 volumeOption ReadWrite = "rw"
 
 volume :: FilePath -> FilePath -> VolumeOption -> [String]
-volume local remote opt =
-  ["--volume", local ++ ":" ++ remote]
+volume local remote opt = ["--volume", local ++ ":" ++ remote]
 
 -- Try to find the volume that contains the referenced path
 findPathInVolumes :: FilePath -> [Volume] -> Maybe FilePath
