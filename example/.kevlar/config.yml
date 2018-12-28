@@ -22,7 +22,7 @@ artifacts:
     - src
 
 - name: env
-  environment:
+  params:
     HELLO: world
 
 - name: test

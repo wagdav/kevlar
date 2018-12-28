@@ -25,7 +25,7 @@ instance FromJSON Step where
         context <- argsO .:  "context"
         return $ DockerImage name context need
 
-    , Environment <$> o .: "name" <*> o .: "environment"
+    , Params <$> o .: "name" <*> o .: "params"
 
     , Source <$> o .: "name" <*> o .: "source"
 

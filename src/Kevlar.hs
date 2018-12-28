@@ -101,8 +101,8 @@ mkRules (Source name src) = build name %> \out -> do
 
   writeFileChanged out (show $ mempty { volumes = [(name, path)] })
 
-mkRules (Environment name e) = build name
-  %> \out -> writeFileChanged out (show $ mempty { envVars = Map.toList e })
+mkRules (Params name e) = build name %> \out ->
+  writeFileChanged out (show $ mempty { artifactParameters = Map.toList e })
 
 mkRules (Secrets name e) = build name %> \out ->
   writeFileChanged out (show $ mempty { artifactSecrets = Map.toList e })
@@ -136,7 +136,7 @@ mkRules (Script name script caches needs) = build name %> \out -> do
   let workdir = "/tmp/kevlar"
   let output  = workdir </> "output"
   let env =
-        envVars artifacts
+        artifactParameters artifacts
           ++ [ ("HOME"          , workdir)
              , ("KEVLAR_OUTPUT" , output)
              , ("KEVLAR_VERSION", v)

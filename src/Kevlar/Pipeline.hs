@@ -20,9 +20,9 @@ data Step
     , caches    :: [FilePath]
     , _need     :: [Name]
     }
-  | Environment
-    { name        :: Name
-    , environment :: Map.Map String String
+  | Params
+    { name      :: Name
+    , params    :: Map.Map String String
     }
   | DockerImage
     { name    :: Name

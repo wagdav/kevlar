@@ -29,10 +29,10 @@ docker_image:
 need: ["src"]
 |]
 
-environmentYaml :: ByteString
-environmentYaml = [r|
+paramsYaml :: ByteString
+paramsYaml = [r|
 name: env
-environment:
+params:
   HELLO: hello
   WORLD: world
 |]
@@ -59,9 +59,9 @@ spec = describe "YAML parser" $ do
     script <- Y.decodeThrow dockerImageYaml
     script `shouldBe` DockerImage "myimage" "src/docker/myimage" ["src"]
 
-  it "should parse environment" $ do
-    script <- Y.decodeThrow environmentYaml
-    script `shouldBe` Environment
+  it "should parse params" $ do
+    script <- Y.decodeThrow paramsYaml
+    script `shouldBe` Params
       "env"
       (Map.fromList [("HELLO", "hello"), ("WORLD", "world")])
 
