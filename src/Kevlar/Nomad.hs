@@ -41,6 +41,7 @@ data Task
   { taskName :: String
   , taskDriver :: String
   , taskConfig :: TaskConfig
+  , taskArtifacts :: [Artifact]
   }
  deriving (Show, Eq, Generic)
 
@@ -53,8 +54,18 @@ data TaskConfig
   }
  deriving (Show, Eq, Generic)
 
+data Artifact
+  = Artifact
+  { artifactSource :: String
+  , artifactDestination :: String
+  }
+ deriving (Show, Eq, Generic)
+
 instance ToJSON Nomad where
   toJSON = genericToJSON defaultOptions { fieldLabelModifier = strip "nomad" }
+
+instance ToJSON Artifact where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = strip "artifact" }
 
 instance ToJSON Job where
   toJSON = genericToJSON defaultOptions { fieldLabelModifier = strip "job" }
@@ -78,7 +89,7 @@ mkJob name image command volumes workDir = Job name  -- id
                                                "batch"
                                                ["dc1"]
                                                [TaskGroup name 1 [task]]
-  where task = Task name "docker" (TaskConfig image command volumes workDir)
+  where task = Task name "docker" (TaskConfig image command volumes workDir) []
 
 writeJob :: FilePath -> Job -> IO ()
 writeJob p j = B.writeFile p (encode $ Nomad j)
