@@ -86,23 +86,14 @@ mkRules (DockerImage name context needs) = build name %> \out -> do
 
 mkRules (Source name src) = build name %> \out -> do
   v    <- gitHash
-  path <- if src == "."
-    then liftIO $ makeAbsolute src
-    else do
-      repo   <- liftIO $ makeAbsolute $ stepOutput v name
-      exists <- doesDirectoryExist repo
-      if exists
-        then do
-          -- Assume that this is directory is already a git checkout.  Refresh
-          -- the repository by following the instructions from
-          -- https://stackoverflow.com/q/2411031
-          quietly $ cmd_ [Cwd repo] ["git", "fetch"]
-          quietly $ cmd_ [Cwd repo] ["git", "reset", "origin/master"]
-          quietly $ cmd_ [Cwd repo] ["git", "checkout", "master"]
-        else cmd_ ["git", "clone", "--recursive", src, repo]
-      return repo
+  --path <- if src == "." then liftIO $ makeAbsolute src else return src
+  path <- if src == "." then liftIO $ makeAbsolute src else return src
 
-  writeFileChanged out (show $ mempty { volumes = [(name, path)] })
+  writeFileChanged
+    out
+    ( show
+    $ mempty { artifactSources = [("github.com/wagdav/kevlar", "local/src")], volumes = [(name, path)] }
+    )
 
 mkRules (Params name e) = build name %> \out ->
   writeFileChanged out (show $ mempty { artifactParameters = Map.toList e })
@@ -114,7 +105,7 @@ mkRules (Script name script caches needs) = build name %> \out -> do
   v         <- gitHash
   artifacts <- getInputArtifact v needs
 
-  need [fromJust $ findPathInVolumes script (volumes artifacts)]
+  --need [fromJust $ findPathInVolumes script (volumes artifacts)]
 
   volCaches <- liftIO $ mapM
     makeAbsolute
@@ -164,21 +155,22 @@ mkRules (Script name script caches needs) = build name %> \out -> do
             ]
           , volume outputHost output ReadWrite
           ]
-    quietly $ cmd_ [Env env] $ concat
-      [ ["docker", "run", "--rm"]
-      , ["--user", show uid ++ ":" ++ show gid]
-      , ["--workdir", workdir]
-      , concat [ ["--env", e] | (e, _) <- env ]
-      , volArgs
-      , [imageId, workdir </> script]
-      ]
+--    quietly $ cmd_ [Env env] $ concat
+--      [ ["docker", "run", "--rm"]
+--      , ["--user", show uid ++ ":" ++ show gid]
+--      , ["--workdir", workdir]
+--      , concat [ ["--env", e] | (e, _) <- env ]
+--      , volArgs
+--      , [imageId, workdir </> script]
+--      ]
 
     liftIO $ Nomad.writeJob "build.json" $ Nomad.mkJob
       name
       (imageName ++ ":" ++ v)
-      (workdir </> script)
-      (filter (/= "--volume") volArgs)
-      workdir
+      script
+      [] --(filter (/= "--volume") volArgs)
+      "/local"
+      (artifactSources artifacts)
 
   writeFileChanged out (show $ mempty { volumes = [(name, outputHost)] })
 

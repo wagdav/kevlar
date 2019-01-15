@@ -25,6 +25,7 @@ data Job
   , jobType :: String
   , jobDatacenters :: [String]
   , jobTaskGroups :: [TaskGroup]
+  , jobReschedulePolicy :: ReschedulePolicy
   }
  deriving (Show, Eq, Generic)
 
@@ -33,6 +34,12 @@ data TaskGroup
   { taskGroupName :: String
   , taskGroupCount :: Int
   , taskGroupTasks :: [Task]
+  }
+ deriving (Show, Eq, Generic)
+
+data ReschedulePolicy
+  = ReschedulePolicy
+  { reschedulePolicyAttempts :: Int
   }
  deriving (Show, Eq, Generic)
 
@@ -56,8 +63,8 @@ data TaskConfig
 
 data Artifact
   = Artifact
-  { artifactSource :: String
-  , artifactDestination :: String
+  { artifactGetterSource :: String
+  , artifactRelativeDest :: String
   }
  deriving (Show, Eq, Generic)
 
@@ -81,15 +88,20 @@ instance ToJSON TaskConfig where
     fieldLabelModifier = fmap Char.toLower . strip "taskConfig"
   }
 
+instance ToJSON ReschedulePolicy where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = strip "reschedulePolicy" }
+
 strip :: String -> String -> String
 strip s = drop (length s)
 
-mkJob name image command volumes workDir = Job name  -- id
+mkJob name image command volumes workDir sources = Job name  -- id
                                                name  -- name
                                                "batch"
                                                ["dc1"]
                                                [TaskGroup name 1 [task]]
-  where task = Task name "docker" (TaskConfig image command volumes workDir) []
+                                               (ReschedulePolicy 0)
+  where task = Task name "docker" (TaskConfig image command volumes workDir) artifacts
+        artifacts = [Artifact s d | (s, d) <- sources]
 
 writeJob :: FilePath -> Job -> IO ()
 writeJob p j = B.writeFile p (encode $ Nomad j)

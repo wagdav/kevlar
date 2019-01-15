@@ -10,6 +10,7 @@ import           Data.Monoid
 type DockerImageId = String
 type Parameter = (String, String)
 type Secret = (String, String)
+type Source = (String, String)
 type Volume = (String, FilePath)
 
 data Artifact
@@ -18,6 +19,7 @@ data Artifact
   , dockerImage :: Last (String, DockerImageId)
   , artifactParameters :: [Parameter]
   , artifactSecrets :: [Secret]
+  , artifactSources :: [Source]
   }
  deriving (Show, Eq, Read)
 
@@ -27,6 +29,7 @@ instance Semigroup Artifact where
     (dockerImage x <> dockerImage y)
     (artifactParameters x <> artifactParameters y)
     (artifactSecrets x <> artifactSecrets y)
+    (artifactSources x <> artifactSources y)
 
 instance Monoid Artifact where
-  mempty = Artifact [] (Last Nothing) [] []
+  mempty = Artifact [] (Last Nothing) [] [] []
