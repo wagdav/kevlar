@@ -92,7 +92,7 @@ mkRules (Source name src) = build name %> \out -> do
   writeFileChanged
     out
     ( show
-    $ mempty { artifactSources = [("github.com/wagdav/kevlar", "local/src")], volumes = [(name, path)] }
+    $ mempty { artifactSources = [("github.com/wagdav/kevlar?ref=nomad", "local/src")], volumes = [(name, path)] }
     )
 
 mkRules (Params name e) = build name %> \out ->
