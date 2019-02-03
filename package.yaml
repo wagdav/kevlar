@@ -28,6 +28,7 @@ dependencies:
 - shake
 - unix
 - yaml
+- lens # only for nomad
 
 library:
   source-dirs: src

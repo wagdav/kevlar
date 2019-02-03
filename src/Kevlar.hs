@@ -22,7 +22,7 @@ import           System.Posix.User              ( getEffectiveUserID
 
 import           Kevlar.Artifact
 import           Kevlar.Pipeline
-import qualified Kevlar.Nomad                  as Nomad
+import qualified Nomad
 
 -- Oracle
 newtype ContainerId = ContainerId String
