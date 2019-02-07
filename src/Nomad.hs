@@ -23,8 +23,8 @@ mkJob name image command volumes workDir sources =
          &  taskGroupTasks
          .~ [ task
             & taskName      .~ name
-            & taskDriver    .~ "docker"
             & taskArtifacts .~ [ Artifact s d | (s, d) <- sources ]
+            & taskDriver    .~ "docker"
             & dockerImage   .~ image
             & dockerCommand .~ command
             & dockerVolumes .~ volumes
