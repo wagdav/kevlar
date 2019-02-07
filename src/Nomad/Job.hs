@@ -102,3 +102,16 @@ makeLenses ''Job
 makeLenses ''Task
 makeLenses ''TaskConfig
 makeLenses ''TaskGroup
+
+-- Lenses for the Docker driver
+dockerImage :: Functor f => (String -> f String) -> Task -> f Task
+dockerImage = taskConfig . taskConfigImage
+
+dockerCommand :: Functor f => (String -> f String) -> Task -> f Task
+dockerCommand = taskConfig . taskConfigCommand
+
+dockerVolumes :: Functor f => ([String] -> f [String]) -> Task -> f Task
+dockerVolumes = taskConfig . taskConfigVolumes
+
+dockerWorkDir :: Functor f => (FilePath -> f FilePath) -> Task -> f Task
+dockerWorkDir = taskConfig . taskConfigWorkDir

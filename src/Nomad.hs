@@ -24,15 +24,13 @@ mkJob name image command volumes workDir sources =
          .~ [ task
             & taskName      .~ name
             & taskDriver    .~ "docker"
-            & taskArtifacts .~ artifacts
-            & taskConfig . taskConfigImage .~ image
-            & taskConfig . taskConfigCommand .~ command
-            & taskConfig . taskConfigVolumes .~ volumes
-            & taskConfig . taskConfigWorkDir .~ workDir
+            & taskArtifacts .~ [ Artifact s d | (s, d) <- sources ]
+            & dockerImage   .~ image
+            & dockerCommand .~ command
+            & dockerVolumes .~ volumes
+            & dockerWorkDir .~ workDir
             ]
        ]
- where
-  artifacts = [ Artifact s d | (s, d) <- sources ]
 
 writeJob :: FilePath -> Job -> IO ()
 writeJob p j = B.writeFile p (encode $ Nomad j)
