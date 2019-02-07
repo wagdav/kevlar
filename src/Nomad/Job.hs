@@ -53,6 +53,7 @@ taskGroup = TaskGroup
   , _taskGroupTasks = []
   }
 
+-- | https://www.nomadproject.io/api/json-jobs.html#reschedulepolicy
 data ReschedulePolicy
   = ReschedulePolicy
   { _reschedulePolicyAttempts :: Int
@@ -64,7 +65,9 @@ data Task
   { _taskName :: String
   -- | https://www.nomadproject.io/api/json-jobs.html#driver
   , _taskDriver :: String
+  -- | https://www.nomadproject.io/api/json-jobs.html#config
   , _taskConfig :: TaskConfig
+  -- | https://www.nomadproject.io/api/json-jobs.html#artifacts
   , _taskArtifacts :: [Artifact]
   }
  deriving (Show, Eq)
@@ -86,6 +89,7 @@ data TaskConfig
   }
  deriving (Show, Eq)
 
+-- | https://www.nomadproject.io/api/json-jobs.html#artifact
 data Artifact
   = Artifact
   { _artifactGetterSource :: String
