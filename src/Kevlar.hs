@@ -1,198 +1,127 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+
 module Kevlar where
 
-import           Control.Monad
-import           Data.List                      ( stripPrefix )
-import           Data.Maybe
-import           Development.Shake
-import           Development.Shake.Classes
-import           Development.Shake.Command
-import           Development.Shake.FilePath
-import qualified Data.Map.Strict               as Map
-import           System.Directory               ( createDirectoryIfMissing
-                                                , makeAbsolute
-                                                )
-import           System.Exit
-import           System.Posix.User              ( getEffectiveUserID
-                                                , getEffectiveGroupID
-                                                )
+import Control.Arrow ((***))
+import Control.Monad
+import qualified Data.Text as T
+import qualified Data.Vector as V
+import Development.Shake
+import Development.Shake.Command
+import Development.Shake.FilePath
+import System.Directory (createDirectoryIfMissing, makeAbsolute)
+import System.Posix.Files (createSymbolicLink)
+import System.Posix.User (getEffectiveGroupID, getEffectiveUserID)
 
-import           Kevlar.Artifact
-import           Kevlar.Pipeline
+import qualified Kevlar.Param as Param
+import qualified Kevlar.Image as Image
+import Kevlar.Need
+import qualified Kevlar.Step as Step
+import Kevlar.Volume
 
--- Oracle
-newtype ContainerId = ContainerId String
-  deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
-type instance RuleResult ContainerId = Maybe String
+inTemporaryDirectory ::
+     [(FilePath, FilePath)] -- ^ input "volumes"
+  -> String -- ^ shell
+  -> String -- ^ script to execute
+  -> [(String, String)]  -- ^ environment variables
+  -> Action ()
+inTemporaryDirectory inputs shell script params =
+  withTempDir $ \workDir -> do
+    let env = [("HOME", workDir), ("KEVLAR_OUTPUT", workDir </> "output")] ++ params
+    forM_
+      inputs
+      (\(target, linkName) ->
+         liftIO $ createSymbolicLink target (workDir </> linkName))
+    cmd_
+      [Stdin script, AddEnv "KEVLAR_OUTPUT" (workDir </> "output"), Cwd workDir]
+      shell
 
-newtype GitHash = GitHash ()
-  deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
-type instance RuleResult GitHash = String
-
-newtype PassSecret = PassSecret String
-  deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
-type instance RuleResult PassSecret = Maybe String
-
-strip = filter (/= '\n')
-
-hashValue :: String -> String
-hashValue x = strip $ fromMaybe x (stripPrefix "sha256:" x)
-
--- oracles
-oracleImage = addOracle $ \(ContainerId name) -> do
-  (Exit c, Stdout out) <- quietly
-    $ cmd ["docker", "inspect", "--format={{ .Id }}", name]
-  return $ case c of
-    ExitSuccess   -> Just (strip out)
-    ExitFailure _ -> Nothing
-
-oracleVersion = addOracle $ \GitHash{} -> do
-  Stdout stdout <- quietly $ cmd "git describe --always --dirty"
-  return $ strip stdout
-
--- Look up a specified secret using the password manager 'pass'
-oraclePass = addOracle $ \(PassSecret passName) -> do
-  (Exit c, Stdout out) <- quietly $ cmd ["pass", "show", passName]
-  return $ case c of
-    ExitSuccess   -> Just (strip out)
-    ExitFailure _ -> Nothing
-
-gitHash = askOracle $ GitHash ()
-
-rulesOracle = do
-  oracleImage
-  oracleVersion
-  oraclePass
-
-mkRules :: Step -> Rules ()
-mkRules (DockerImage name context needs) = build name %> \out -> do
-  v         <- gitHash
-
-  -- try to find the volume that contains the referenced context
-  artifacts <- getInputArtifact v needs
-  let context' = fromJust $ findPathInVolumes context (volumes artifacts)
-
-  getDirectoryFiles context' ["//*"]
-  withTempFile $ \iidfile -> do
-    cmd_ ["docker", "build", "--iidfile", iidfile, context']
-    imageId <- liftIO $ hashValue <$> readFile iidfile
-    writeFileChanged
-      out
-      (show $ mempty { dockerImage = Last $ Just (name, imageId) })
-
-mkRules (Source name src) = build name %> \out -> do
-  v    <- gitHash
-  path <- if src == "."
-    then liftIO $ makeAbsolute src
-    else do
-      repo   <- liftIO $ makeAbsolute $ stepOutput v name
-      exists <- doesDirectoryExist repo
-      if exists
-        then do
-          -- Assume that this is directory is already a git checkout.  Refresh
-          -- the repository by following the instructions from
-          -- https://stackoverflow.com/q/2411031
-          quietly $ cmd_ [Cwd repo] ["git", "fetch"]
-          quietly $ cmd_ [Cwd repo] ["git", "reset", "origin/master"]
-          quietly $ cmd_ [Cwd repo] ["git", "checkout", "master"]
-        else cmd_ ["git", "clone", "--recursive", src, repo]
-      return repo
-
-  writeFileChanged out (show $ mempty { volumes = [(name, path)] })
-
-mkRules (Params name e) = build name %> \out ->
-  writeFileChanged out (show $ mempty { artifactParameters = Map.toList e })
-
-mkRules (Secrets name e) = build name %> \out ->
-  writeFileChanged out (show $ mempty { artifactSecrets = Map.toList e })
-
-mkRules (Script name script caches needs) = build name %> \out -> do
-  v         <- gitHash
-  artifacts <- getInputArtifact v needs
-
-  need [fromJust $ findPathInVolumes script (volumes artifacts)]
-
-  volCaches <- liftIO $ mapM
-    makeAbsolute
-    [ "_build" </> "caches" </> show i | i <- [1 .. length caches] ]
-  liftIO $ mapM (createDirectoryIfMissing True) volCaches
-
-  let (imageName, imageId) = fromJust . getLast $ dockerImage artifacts
-  putNormal $ unwords ["Executing", script, "in", imageName]
-
-  outputHost <- liftIO $ makeAbsolute $ stepOutput v name
-  liftIO $ createDirectoryIfMissing True outputHost
-
-  secrets <-
-    mapM
-        (\(name, path) -> do
-          value <- askOracle (PassSecret path)
-          unless (isJust value) $ fail ("Couldn't find the secret: " ++ path)
-          return (name, fromJust value)
-        )
-      $ artifactSecrets artifacts
-
-  let workdir = "/tmp/kevlar"
-  let output  = workdir </> "output"
-  let env =
-        artifactParameters artifacts
-          ++ [ ("HOME"          , workdir)
-             , ("KEVLAR_OUTPUT" , output)
-             , ("KEVLAR_VERSION", v)
-             ]
-          ++ secrets
-
+inDockerContainer ::
+     String -- ^ image name
+  -> Maybe String -- ^ path of the docker image
+  -> [(FilePath, FilePath)]
+  -> String -- ^ shell
+  -> String -- ^ script to execute
+  -> [(String, String)]  -- ^ environment variables
+  -> Action ()
+inDockerContainer imageName imageLoad volumes shell script params = do
   uid <- liftIO getEffectiveUserID
   gid <- liftIO getEffectiveGroupID
+  let workDir = "/tmp/build"
+  let env = [("HOME", workDir), ("KEVLAR_OUTPUT", workDir </> "output")] ++ params
+  maybe
+    (return ())
+    (\image -> inTemporaryDirectory volumes "sh" ("docker load -i " ++ image) params)
+    imageLoad
+  withTempDir $ \wkHost
+    {- Create the container's working directory already on the host so that it
+     will be owned by the host user. -}
+   -> do
+    liftIO $ createDirectoryIfMissing True (wkHost </> takeFileName workDir)
+    cmd_ [Stdin script, Env env] $
+      concat
+        [ ["docker", "run", "--rm", "-i"]
+        , ["--user", show uid ++ ":" ++ show gid]
+      -- environment variables
+        , concat [["--env", e] | (e, _) <- env]
+      -- working directory within the container
+        , volume
+            (HostPath wkHost)
+            (ContainerPath $ takeDirectory workDir)
+            ReadWrite
+      -- volumes
+        , concat
+            [ volume (HostPath p) (ContainerPath $ workDir </> name) ReadWrite
+            | (p, name) <- volumes
+            ]
+      -- container starts in this directory
+        , ["--workdir", workDir]
+        , [imageName]
+        ]
 
-  quietly $ cmd_ ["docker", "tag", imageId, imageName ++ ":" ++ v]
-  withTempDir $ \wkHost -> quietly $ cmd_ [Env env] $ concat
-    [ ["docker", "run", "--rm"]
-    , ["--user", show uid ++ ":" ++ show gid]
-    , ["--workdir", workdir]
-    , concat [ ["--env", e] | (e, _) <- env ]
-    , volume wkHost workdir ReadWrite
-    , concat
-      [ volume hostPath (workdir </> name) ReadWrite
-      | (name, hostPath) <- volumes artifacts
-      ]
-    , concat
-      [ volume vol (makeAbsoluteIfRelative workdir c) ReadWrite
-      | (vol, c) <- zip volCaches caches
-      ]
-    , volume outputHost output ReadWrite
-    , [imageId, workdir </> script]
-    ]
+mkRules :: Step.Step -> Rules ()
+mkRules (Step.Step name shell script image needs caches params) =
+  phony stepName $ do
+    volInputs <- V.mapM toVolume needs
+    volOutput <- localVolume (stepOutput stepName) "output"
+    volCaches <- V.mapM localCache caches'
+    let volumes = [volOutput] ++ V.toList volInputs ++ V.toList volCaches
+    maybe
+      (inTemporaryDirectory volumes scriptShell (T.unpack script) params')
+      (\image ->
+         inDockerContainer
+           (T.unpack $ Image.name image)
+           (T.unpack <$> Image.load image)
+           volumes
+           scriptShell
+           (T.unpack script)
+           params')
+      image
+  where
+    scriptShell = T.unpack shell
+    stepName = T.unpack name
+    caches' = V.map T.unpack caches
+    params' = V.toList $ V.map (\p -> (T.unpack $ Param.name p, T.unpack $ Param.value p)) params
 
-  writeFileChanged out (show $ mempty { volumes = [(name, outputHost)] })
+    toVolume :: Need -> Action (FilePath, String)
+    toVolume (Output name) = do
+      let name' = T.unpack name
+      srcAbs <- liftIO $ makeAbsolute (stepOutput name')
+      need [name']
+      return (srcAbs, name')
+    toVolume (Fetch src dst) = return (T.unpack src, T.unpack dst)
 
-getInputArtifact :: String -> [String] -> Action Artifact
-getInputArtifact version names = do
-  contents <- mapM (readFile' . build) names
-  return $ mconcat (map read contents)
+    localVolume :: FilePath -> String -> Action (FilePath, String)
+    localVolume path volName = do
+      hostAbsPath <- liftIO $ makeAbsolute path
+      liftIO $ createDirectoryIfMissing True hostAbsPath
+      return (hostAbsPath, volName)
 
-data VolumeOption
-  = ReadOnly
-  | ReadWrite
- deriving (Eq, Show)
+    localCache :: FilePath -> Action (FilePath, String)
+    localCache name = localVolume (cache stepName name) name
 
-volumeOption :: VolumeOption -> String
-volumeOption ReadOnly  = "ro"
-volumeOption ReadWrite = "rw"
+stepOutput :: String -> FilePath
+stepOutput name = "_build" </> "artifacts" </> name
 
-volume :: FilePath -> FilePath -> VolumeOption -> [String]
-volume local remote opt =
-  ["--volume", local ++ ":" ++ remote ++ ":" ++ volumeOption opt]
-
--- Try to find the volume that contains the referenced path
-findPathInVolumes :: FilePath -> [Volume] -> Maybe FilePath
-findPathInVolumes p volumes =
-  (</> dropDirectory1 p) <$> lookup (takeDirectory1 p) volumes
-
-makeAbsoluteIfRelative base path =
-  if isRelative path then base </> path else path
-
--- build parameters
-build name = "_build" </> ".kevlar-work" </> name ++ ".done"
-stepOutput version name = "_build" </> "artifacts" </> version </> name
+cache :: String -> FilePath -> FilePath
+cache stepName cacheName = "_build" </> "caches" </> stepName </> cacheName

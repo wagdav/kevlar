@@ -1,30 +1,32 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
-import           Kevlar
-import           Kevlar.Pipeline
-import           Kevlar.Yaml
+import Control.Monad (forM_)
+import Data.Text as T
+import Development.Shake
+import System.IO.Temp
 
-import           Control.Monad                  ( forM_ )
-
-import           Development.Shake
+import Kevlar
+import Kevlar.Config
+import Kevlar.Git
+import Kevlar.Step
 
 kevlarConfig :: FilePath
-kevlarConfig = ".kevlar/config.yml"
+kevlarConfig = ".kevlar.dhall"
 
 main :: IO ()
-main = shakeArgs shakeOptions { shakeFiles = "_build" } $ do
-  rulesOracle
+main = withSystemTempDirectory "kevlar" shakeMain
 
-  phony "clean" $ do
-    putNormal "Cleaning artifacts in _build"
-    removeFilesAfter "_build/artifacts" ["//*"]
-
-  phony "purge" $ do
-    putNormal "Removing _build"
-    removeFilesAfter "_build" ["//*"]
-
-  pipeline <- liftIO $ readPipeline kevlarConfig
-  forM_ (steps pipeline) $ \step -> do
-    mkRules step
-
-    phony (name step) $ need [kevlarConfig, build (name step)]
+shakeMain :: FilePath -> IO ()
+shakeMain src =
+  shakeArgs shakeOptions {shakeFiles = "_build"} $ do
+    phony "clean" $ do
+      putNormal "Cleaning artifacts in _build"
+      removeFilesAfter "_build/artifacts" ["//*"]
+    phony "purge" $ do
+      putNormal "Removing _build"
+      removeFilesAfter "_build" ["//*"]
+    config <- liftIO $ readConfig kevlarConfig
+    forM_ (steps . config $ T.pack src) mkRules
+    liftIO $ copyGitFiles src

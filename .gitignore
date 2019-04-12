@@ -4,3 +4,6 @@ kevlar.cabal
 
 _build
 _shake
+
+# Dhall
+.history
