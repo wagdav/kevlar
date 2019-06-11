@@ -2,6 +2,8 @@
 
 ## Unreleased changes
 
+## [0.0.2] - 2019-06-11
+
 - A complete rewrite of the initial implementation
 - YAML configuration format is replaced by Dhall
 - The support for handling secrets using `pass` is temporarilty dropped
