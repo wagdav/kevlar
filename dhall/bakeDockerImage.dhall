@@ -11,7 +11,10 @@ in    λ(image : Text)
               None types.Image
           , script =
               ''
-              docker build -t ${image} - <<< "${dockerfile}"
+              cat << 'DOCKERFILE' | docker build -t ${image} -
+              ${dockerfile}
+              DOCKERFILE
+
               docker save -o output/${image}.tar ${image}
               ''
           }
