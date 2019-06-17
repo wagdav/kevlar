@@ -13,7 +13,7 @@ import System.Directory (createDirectoryIfMissing, makeAbsolute)
 import System.Posix.Files (createSymbolicLink)
 import System.Posix.User (getEffectiveGroupID, getEffectiveUserID)
 
-import qualified Kevlar.Param as Param
+import qualified Kevlar.EnvVar as EnvVar
 import qualified Kevlar.Image as Image
 import Kevlar.Need
 import qualified Kevlar.Step as Step
@@ -25,9 +25,9 @@ inTemporaryDirectory ::
   -> String -- ^ script to execute
   -> [(String, String)]  -- ^ environment variables
   -> Action ()
-inTemporaryDirectory inputs shell script params =
+inTemporaryDirectory inputs shell script envVars =
   withTempDir $ \workDir -> do
-    let env = [("HOME", workDir), ("KEVLAR_OUTPUT", workDir </> "output")] ++ params
+    let env = [("HOME", workDir), ("KEVLAR_OUTPUT", workDir </> "output")] ++ envVars
     forM_
       inputs
       (\(target, linkName) ->
@@ -44,14 +44,14 @@ inDockerContainer ::
   -> String -- ^ script to execute
   -> [(String, String)]  -- ^ environment variables
   -> Action ()
-inDockerContainer imageName imageLoad volumes shell script params = do
+inDockerContainer imageName imageLoad volumes shell script envVars = do
   uid <- liftIO getEffectiveUserID
   gid <- liftIO getEffectiveGroupID
   let workDir = "/tmp/build"
-  let env = [("HOME", workDir), ("KEVLAR_OUTPUT", workDir </> "output")] ++ params
+  let env = [("HOME", workDir), ("KEVLAR_OUTPUT", workDir </> "output")] ++ envVars
   maybe
     (return ())
-    (\image -> inTemporaryDirectory volumes "sh" ("docker load -i " ++ image) params)
+    (\image -> inTemporaryDirectory volumes "sh" ("docker load -i " ++ image) envVars)
     imageLoad
   withTempDir $ \wkHost
     {- Create the container's working directory already on the host so that it
@@ -80,14 +80,14 @@ inDockerContainer imageName imageLoad volumes shell script params = do
         ]
 
 mkRules :: Step.Step -> Rules ()
-mkRules (Step.Step name shell script image needs caches params) =
+mkRules (Step.Step name shell script image needs caches envVars) =
   phony stepName $ do
     volInputs <- V.mapM toVolume needs
     volOutput <- localVolume (stepOutput stepName) "output"
     volCaches <- V.mapM localCache caches'
     let volumes = [volOutput] ++ V.toList volInputs ++ V.toList volCaches
     maybe
-      (inTemporaryDirectory volumes scriptShell (T.unpack script) params')
+      (inTemporaryDirectory volumes scriptShell (T.unpack script) envVars')
       (\image ->
          inDockerContainer
            (T.unpack $ Image.name image)
@@ -95,13 +95,13 @@ mkRules (Step.Step name shell script image needs caches params) =
            volumes
            scriptShell
            (T.unpack script)
-           params')
+           envVars')
       image
   where
     scriptShell = T.unpack shell
     stepName = T.unpack name
     caches' = V.map T.unpack caches
-    params' = V.toList $ V.map (\p -> (T.unpack $ Param.name p, T.unpack $ Param.value p)) params
+    envVars' = V.toList $ V.map (\p -> (T.unpack $ EnvVar.name p, T.unpack $ EnvVar.value p)) envVars
 
     toVolume :: Need -> Action (FilePath, String)
     toVolume (Output name) = do

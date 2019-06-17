@@ -3,7 +3,7 @@ let Image = { name : Text, load : Optional Text }
 
 let Need = < Fetch : { src : Text, name : Text } | Output : { name : Text } >
 
-let Param = { name : Text, value : Text }
+let EnvVar = { name : Text, value : Text }
 
 let Step =
       { name :
@@ -18,10 +18,10 @@ let Step =
           List Need
       , caches :
           List Text
-      , params :
-          List Param
+      , environment :
+          List EnvVar
       }
 
 let Config = { steps : List Step }
 
-in  { Config = Config, Image = Image, Need = Need, Step = Step, Param = Param }
+in  { Config = Config, Image = Image, Need = Need, Step = Step, EnvVar = EnvVar }

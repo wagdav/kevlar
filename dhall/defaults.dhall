@@ -17,8 +17,8 @@ in  { Config =
               [] : List types.Need
           , caches =
               [] : List Text
-          , params =
-              [] : List types.Param
+          , environment =
+              [] : List types.EnvVar
           }
         : types.Step
     , Image =

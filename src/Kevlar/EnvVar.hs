@@ -1,12 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Kevlar.Param where
+module Kevlar.EnvVar where
 
 import Dhall
 
-data Param = Param
+data EnvVar = EnvVar
   { name :: Text
   , value :: Text
   } deriving (Generic, Show)
 
-instance Interpret Param
+instance Interpret EnvVar
