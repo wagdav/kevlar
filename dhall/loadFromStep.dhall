@@ -8,7 +8,7 @@ in    λ(step : types.Step)
           ⫽ { name =
                 "${step.name}"
             , load =
-                Some "${step.name}/${step.name}.tar"
+                Some "${step.name}/image.tar"
             }
         )
       : Optional types.Image

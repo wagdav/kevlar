@@ -15,7 +15,7 @@ in    λ(image : Text)
               ${dockerfile}
               DOCKERFILE
 
-              docker save -o output/${image}.tar ${image}
+              docker save -o output/image.tar ${image}
               ''
           }
       : types.Step
