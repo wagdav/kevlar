@@ -7,10 +7,8 @@ let output = λ(name : Text) → types.Need.Output { name = name }
 
 in  { Step =
         defaults.Step
-    , bakeDockerImage =
-        ./../dhall/bakeDockerImage.dhall
-    , loadFromStep =
-        ./../dhall/loadFromStep.dhall
+    , usingSourceBuiltImage =
+        ./../dhall/usingSourceBuiltImage.dhall
     , fetch =
         types.Need.Fetch
     , output =
