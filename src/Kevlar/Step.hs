@@ -5,7 +5,7 @@ module Kevlar.Step where
 
 import Kevlar.Image
 import Kevlar.Need
-import Kevlar.Param
+import Kevlar.EnvVar
 
 import Dhall
 
@@ -16,7 +16,7 @@ data Step = Step
   , image :: Maybe Image
   , need :: Vector Need
   , caches :: Vector Text
-  , params :: Vector Param
+  , environment :: Vector EnvVar
   } deriving (Generic, Show)
 
 instance Interpret Step

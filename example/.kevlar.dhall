@@ -37,7 +37,7 @@ let test =
               ''
           , need =
               [ ci.output "build" ]
-          , params =
+          , environment =
               [ { name = "HELLO", value = "world!" } ]
           }
       )

@@ -30,7 +30,7 @@ let publish =
                 [ ci.output "build" ]
             , caches =
                 [ ".stack" ]
-            , params =
+            , environment =
                 [ { name =
                       "GITHUB_ACCESS_TOKEN"
                   , value =
