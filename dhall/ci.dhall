@@ -1,14 +1,14 @@
 {- A high-level module to be used in CI pipeline definitions -}
-let types = ./../dhall/types.dhall
+let types = ./types.dhall
 
-let defaults = ./../dhall/defaults.dhall
+let defaults = ./defaults.dhall
 
 let output = λ(name : Text) → types.Need.Output { name = name }
 
 in  { Step =
         defaults.Step
     , usingSourceBuiltImage =
-        ./../dhall/usingSourceBuiltImage.dhall
+        ./usingSourceBuiltImage.dhall
     , fetch =
         types.Need.Fetch
     , output =
