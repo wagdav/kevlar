@@ -14,9 +14,9 @@ import System.Posix.Files (createSymbolicLink)
 import System.Posix.User (getEffectiveGroupID, getEffectiveUserID)
 
 import qualified Kevlar.EnvVar as EnvVar
-import qualified Kevlar.Image as Image
 import Kevlar.Need
 import qualified Kevlar.Step as Step
+import qualified Kevlar.Action as Action
 import Kevlar.Volume
 
 inTemporaryDirectory ::
@@ -79,8 +79,8 @@ inDockerContainer imageName imageLoad volumes shell script envVars = do
         , [imageName]
         ]
 
-mkRules :: Step.Step -> Rules ()
-mkRules (Step.Step name shell script image needs caches envVars) =
+mkRules :: T.Text -> Step.Step -> Rules ()
+mkRules src (Step.Step name action) =
   phony stepName $ do
     volInputs <- V.mapM toVolume needs
     volOutput <- localVolume (stepOutput stepName) "output"
@@ -90,14 +90,15 @@ mkRules (Step.Step name shell script image needs caches envVars) =
       (inTemporaryDirectory volumes scriptShell (T.unpack script) envVars')
       (\image ->
          inDockerContainer
-           (T.unpack $ Image.name image)
-           (T.unpack <$> Image.load image)
+           (T.unpack image)
+           (T.unpack <$> load)
            volumes
            scriptShell
            (T.unpack script)
            envVars')
       image
   where
+    (Action.Action shell script image load needs caches envVars) = action src
     scriptShell = T.unpack shell
     stepName = T.unpack name
     caches' = V.map T.unpack caches

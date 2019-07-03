@@ -28,5 +28,5 @@ shakeMain src =
       putNormal "Removing _build"
       removeFilesAfter "_build" ["//*"]
     config <- liftIO $ readConfig kevlarConfig
-    forM_ (steps . config $ T.pack src) mkRules
+    forM_ (steps config) (mkRules (T.pack src))
     liftIO $ copyGitFiles src

@@ -2,13 +2,12 @@
 
 module Kevlar.Config where
 
-import Kevlar.Image
 import Kevlar.Step
 
 import Dhall
 
 
-type Config = Text -> Steps
+type Config = Steps
 
 readConfig :: FilePath -> IO Config
 readConfig = inputFile auto

@@ -3,14 +3,21 @@ let types = ./types.dhall
 
 let defaults = ./defaults.dhall
 
-let output = λ(name : Text) → types.Need.Output { name = name }
+let fetch =
+        λ(src : Text)
+      → λ(name : Text)
+      → types.Need.Fetch { src = src, name = name }
 
-in  { Step =
+let output = λ(step : types.Step) → types.Need.Output { name = step.name }
+
+in  { Action =
+        defaults.Action
+    , Step =
         defaults.Step
-    , usingSourceBuiltImage =
-        ./usingSourceBuiltImage.dhall
+    , docker =
+        ./docker.dhall
     , fetch =
-        types.Need.Fetch
+        fetch
     , output =
         output
     }

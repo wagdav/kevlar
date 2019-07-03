@@ -1,19 +1,17 @@
 {- Kevlar standard library -}
-let Image = { name : Text, load : Optional Text }
-
 let Need = < Fetch : { src : Text, name : Text } | Output : { name : Text } >
 
 let EnvVar = { name : Text, value : Text }
 
-let Step =
-      { name :
-          Text
-      , shell :
+let Action =
+      { shell :
           Text
       , script :
           Text
       , image :
-          Optional Image
+          Optional Text
+      , load :
+          Optional Text
       , need :
           List Need
       , caches :
@@ -22,6 +20,18 @@ let Step =
           List EnvVar
       }
 
+let Step = { name : Text, action : Text → Action }
+
 let Config = { steps : List Step }
 
-in  { Config = Config, Image = Image, Need = Need, Step = Step, EnvVar = EnvVar }
+in  { Action =
+        Action
+    , Config =
+        Config
+    , Need =
+        Need
+    , Step =
+        Step
+    , EnvVar =
+        EnvVar
+    }

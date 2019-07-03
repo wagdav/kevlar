@@ -1,49 +1,61 @@
 let ci = ./dhall/ci.dhall
 
+let bakeBuilderImage =
+      { name = "bakeBuilderImage", action = ci.docker.build "kevlar-builder" }
+
 let build =
-        λ(repo : Text)
-      → ci.usingSourceBuiltImage
-        "kevlar-builder"
-        (   ci.Step
-          ⫽ { name =
-                "build"
-            , script =
-                ./ci/build.sh as Text
-            , need =
-                [ ci.fetch { src = repo, name = "src" } ]
-            , caches =
-                [ ".stack" ]
-            }
-        )
-        repo
+      { name =
+          "build"
+      , action =
+            λ(repo : Text)
+          → ci.docker.loadFromStep
+            bakeBuilderImage
+            (   ci.Action
+              ⫽ { script =
+                    ./ci/build.sh as Text
+                , image =
+                    Some "kevlar-builder"
+                , need =
+                    [ ci.fetch repo "src" ]
+                , caches =
+                    [ ".stack" ]
+                }
+            )
+      }
+
+let bakePublishImage =
+      { name = "bakePublishImage", action = ci.docker.build "kevlar-publish" }
 
 let publish =
-        λ(repo : Text)
-      → ci.usingSourceBuiltImage
-        "kevlar-publish"
-        (   ci.Step
-          ⫽ { name =
-                "publish"
-            , script =
-                ./ci/publish.sh as Text
-            , need =
-                [ ci.output "build" ]
-            , caches =
-                [ ".stack" ]
-            , environment =
-                [ { name =
-                      "GITHUB_ACCESS_TOKEN"
-                  , value =
-                      env:GITHUB_ACCESS_TOKEN as Text ? ""
-                  }
-                , { name =
-                      "KEVLAR_VERSION"
-                  , value =
-                      env:KEVLAR_VERSION as Text ? ""
-                  }
-                ]
-            }
-        )
-        repo
+      { name =
+          "publish"
+      , action =
+            λ(repo : Text)
+          → ci.docker.loadFromStep
+            bakePublishImage
+            (   ci.Action
+              ⫽ { script =
+                    ./ci/publish.sh as Text
+                , image =
+                    Some "kevlar-publish"
+                , need =
+                    [ ci.output build ]
+                , caches =
+                    [ ".stack" ]
+                , environment =
+                    [ { name =
+                          "GITHUB_ACCESS_TOKEN"
+                      , value =
+                          env:GITHUB_ACCESS_TOKEN as Text ? ""
+                      }
+                    , { name =
+                          "KEVLAR_VERSION"
+                      , value =
+                          env:KEVLAR_VERSION as Text ? ""
+                      }
+                    ]
+                }
+            )
+      }
 
-in  λ(repo : Text) → { steps = build repo # publish repo }
+in  { steps = [ bakeBuilderImage, bakePublishImage, build, publish ] }
