@@ -40,8 +40,6 @@ let publish =
                     Some "kevlar-publish"
                 , need =
                     [ ci.output build ]
-                , caches =
-                    [ ".stack" ]
                 , environment =
                     [ { name =
                           "GITHUB_ACCESS_TOKEN"
