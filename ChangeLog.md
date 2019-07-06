@@ -2,6 +2,11 @@
 
 ## Unreleased changes
 
+## [0.0.3] - 2019-07-06
+
+- The step definition is changed so that expressing dependencies is now easier
+- Re-usable Docker image building component was added in dhall/docker.dhall
+
 ## [0.0.2] - 2019-06-11
 
 - A complete rewrite of the initial implementation
