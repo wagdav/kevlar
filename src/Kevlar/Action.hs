@@ -7,7 +7,6 @@ import Kevlar.Need
 
 import Dhall
 
-
 data Action = Action
   { shell :: Text
   , script :: Text

@@ -1,35 +1,27 @@
 let ci = ./../dhall/ci.dhall
 
 let bakeBuilderImage =
-      { name =
-          "bakeBuilderImage"
-      , action =
-          ci.docker.build "hello-world-builder"
+      { name = "bakeBuilderImage"
+      , action = ci.docker.build "hello-world-builder"
       }
 
 let build =
-      { name =
-          "build"
+      { name = "build"
       , action =
             λ(repo : Text)
           → ci.docker.loadFromStep
-            bakeBuilderImage
-            (   ci.Action
-              ⫽ { script =
-                    ./build.sh as Text
-                , need =
-                    [ ci.fetch repo "src" ]
-                , image =
-                    Some "hello-world-builder"
-                }
-            )
+              bakeBuilderImage
+              (   ci.Action
+                ⫽ { script = ./build.sh as Text
+                  , need = [ ci.fetch repo "src" ]
+                  , image = Some "hello-world-builder"
+                  }
+              )
       }
 
 let bakeTesterImage =
-      { name =
-          "bakeTesterImage"
-      , action =
-          ci.docker.build "hello-world-tester"
+      { name = "bakeTesterImage"
+      , action = ci.docker.build "hello-world-tester"
       }
 
 let test =
@@ -40,30 +32,27 @@ let test =
               : Text
               )
           → ci.docker.loadFromStep
-            bakeTesterImage
-            (   ci.Action
-              ⫽ { script =
-                    ''
-                    #!/bin/sh
-                    set -e
-                    echo "Artifacts from previous steps are available in this container"
-                    tree -L 1
+              bakeTesterImage
+              (   ci.Action
+                ⫽ { script =
+                      ''
+                      #!/bin/sh
+                      set -e
+                      echo "Artifacts from previous steps are available in this container"
+                      tree -L 1
 
-                    echo
-                    echo "Environment variables can be specified in the step: \$HELLO=$HELLO"
+                      echo
+                      echo "Environment variables can be specified in the step: \$HELLO=$HELLO"
 
-                    echo
-                    echo "Running the output artifacts from the 'build' step"
-                    ${build.name}/hello
-                    ''
-                , image =
-                    Some "hello-world-tester"
-                , need =
-                    [ ci.output build ]
-                , environment =
-                    [ { name = "HELLO", value = "world!" } ]
-                }
-            )
+                      echo
+                      echo "Running the output artifacts from the 'build' step"
+                      ${build.name}/hello
+                      ''
+                  , image = Some "hello-world-tester"
+                  , need = [ ci.output build ]
+                  , environment = toMap { HELLO = "world!" }
+                  }
+              )
       }
 
 in  { steps = [ build, test, bakeBuilderImage, bakeTesterImage ] }

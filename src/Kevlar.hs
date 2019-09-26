@@ -102,7 +102,7 @@ mkRules src (Step.Step name action) =
     scriptShell = T.unpack shell
     stepName = T.unpack name
     caches' = V.map T.unpack caches
-    envVars' = V.toList $ V.map (\p -> (T.unpack $ EnvVar.name p, T.unpack $ EnvVar.value p)) envVars
+    envVars' = V.toList $ V.map (\(EnvVar.EnvVar a b) -> (T.unpack a, T.unpack b)) envVars
 
     toVolume :: Need -> Action (FilePath, String)
     toVolume (Output name) = do

@@ -10,14 +10,9 @@ let fetch =
 
 let output = λ(step : types.Step) → types.Need.Output { name = step.name }
 
-in  { Action =
-        defaults.Action
-    , Step =
-        defaults.Step
-    , docker =
-        ./docker.dhall
-    , fetch =
-        fetch
-    , output =
-        output
+in  { Action = defaults.Action
+    , Step = defaults.Step
+    , docker = ./docker.dhall
+    , fetch = fetch
+    , output = output
     }

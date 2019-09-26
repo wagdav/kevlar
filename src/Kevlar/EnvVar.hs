@@ -5,8 +5,8 @@ module Kevlar.EnvVar where
 import Dhall
 
 data EnvVar = EnvVar
-  { name :: Text
-  , value :: Text
+  { mapKey :: Text
+  , mapValue :: Text
   } deriving (Generic, Show)
 
 instance Interpret EnvVar
