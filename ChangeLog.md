@@ -2,6 +2,8 @@
 
 ## Unreleased changes
 
+- Enable the use of `toMap` Dhall builtin
+
 ## [0.0.3] - 2019-07-06
 
 - The step definition is changed so that expressing dependencies is now easier
