@@ -1,49 +1,45 @@
 let Kevlar = ./dhall/package.dhall
 
-let bakeBuilderImage =
-      Kevlar.Step::{
-      , name = "bakeBuilderImage"
-      , action = Kevlar.docker.build "kevlar-builder"
-      }
+let docker = ./dhall/docker.dhall
+
+let builderImage = docker.build "kevlar-builder"
 
 let build =
-      Kevlar.Step::{
-      , name = "build"
-      , action =
-            λ(repo : Text)
-          → Kevlar.docker.loadFromStep
-              bakeBuilderImage
-              Kevlar.Action::{
-              , script = ./ci/build.sh as Text
-              , image = Some "kevlar-builder"
-              , need = [ Kevlar.fetch repo "src" ]
-              , caches = [ ".stack" ]
-              }
-      }
+        λ(repo : Text)
+      → Kevlar.Action::{
+        , script = ./ci/build.sh as Text
+        , image = Some "kevlar-builder"
+        , need = [ Kevlar.fetch repo "src", Kevlar.output "builderImage" ]
+        , load = Some "builderImage/image.tar"
+        , caches = [ ".stack" ]
+        }
 
-let bakePublishImage =
-      Kevlar.Step::{
-      , name = "bakePublishImage"
-      , action = Kevlar.docker.build "kevlar-publish"
-      }
+let publishImage = docker.build "kevlar-publish"
 
 let publish =
-      Kevlar.Step::{
-      , name = "publish"
-      , action =
-            λ(repo : Text)
-          → Kevlar.docker.loadFromStep
-              bakePublishImage
-              Kevlar.Action::{
-              , script = ./ci/publish.sh as Text
-              , image = Some "kevlar-publish"
-              , need = [ Kevlar.output build ]
-              , environment =
-                  toMap
-                    { GITHUB_ACCESS_TOKEN = env:GITHUB_ACCESS_TOKEN as Text ? ""
-                    , KEVLAR_VERSION = env:KEVLAR_VERSION as Text ? ""
-                    }
+        λ(repo : Text)
+      → Kevlar.Action::{
+        , script = ./ci/publish.sh as Text
+        , image = Some "kevlar-publish"
+        , need = [ Kevlar.output "build", Kevlar.output "publishImage" ]
+        , load = Some "publishImage/image.tar"
+        , environment =
+            toMap
+              { GITHUB_ACCESS_TOKEN = env:GITHUB_ACCESS_TOKEN as Text ? ""
+              , KEVLAR_VERSION = env:KEVLAR_VERSION as Text ? ""
               }
-      }
+        }
 
-in  { steps = [ bakeBuilderImage, bakePublishImage, build, publish ] }
+let steps =
+      toMap
+        { builderImage = Kevlar.Step::{ action = builderImage }
+        , publishImage = Kevlar.Step::{ action = publishImage }
+        , build = Kevlar.Step::{ action = build, requires = [ "builderImage" ] }
+        , publish =
+            Kevlar.Step::{
+            , action = publish
+            , requires = [ "build", "publishImage" ]
+            }
+        }
+
+in  { steps = steps }
