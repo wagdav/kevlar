@@ -1,6 +1,8 @@
 let Kevlar = ./../dhall/package.dhall
 
-let bakeBuilderImage = Kevlar.docker.build "hello-world-builder"
+let docker = ../dhall/docker.dhall
+
+let bakeBuilderImage = docker.build "hello-world-builder"
 
 let build =
         λ(repo : Text)
@@ -11,7 +13,7 @@ let build =
         , load = Some "bakeBuilderImage/image.tar"
         }
 
-let bakeTesterImage = Kevlar.docker.build "hello-world-tester"
+let bakeTesterImage = docker.build "hello-world-tester"
 
 let test =
         λ ( repo

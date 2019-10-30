@@ -13,5 +13,4 @@ in  { Action = { Type = types.Action, default = defaults.Action }
     , Step = { Type = types.Step, default = defaults.Step }
     , fetch = fetch
     , output = output
-    , docker = ./docker.dhall
     }
