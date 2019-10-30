@@ -12,10 +12,10 @@ data Step = Step
   , action :: Text -> Action
   } deriving (Generic)
 
-instance Interpret Step
+instance FromDhall Step
 
 data Steps = Steps
   { steps :: Vector Step
   } deriving (Generic)
 
-instance Interpret Steps
+instance FromDhall Steps

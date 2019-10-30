@@ -11,4 +11,4 @@ data Need
   | Output { name :: Text }
   deriving (Generic, Show)
 
-instance Interpret Need
+instance FromDhall Need

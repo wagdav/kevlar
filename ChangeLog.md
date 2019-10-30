@@ -3,6 +3,7 @@
 ## Unreleased changes
 
 - Enable the use of `toMap` Dhall builtin
+- Enable the use of the `::` operator (new in Dhall v11.0.0)
 
 ## [0.0.3] - 2019-07-06
 

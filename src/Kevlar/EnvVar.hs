@@ -9,4 +9,4 @@ data EnvVar = EnvVar
   , mapValue :: Text
   } deriving (Generic, Show)
 
-instance Interpret EnvVar
+instance FromDhall EnvVar

@@ -17,4 +17,4 @@ data Action = Action
   , environment :: Vector EnvVar
   } deriving (Generic, Show)
 
-instance Interpret Action
+instance FromDhall Action
