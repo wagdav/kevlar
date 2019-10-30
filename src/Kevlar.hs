@@ -80,8 +80,9 @@ inDockerContainer imageName imageLoad volumes shell script envVars = do
         ]
 
 mkRules :: T.Text -> Step.Step -> Rules ()
-mkRules src (Step.Step name action) =
+mkRules src (Step.Step name (Step.StepDef action requires)) =
   phony stepName $ do
+    need $ V.toList (V.map T.unpack requires)
     volInputs <- V.mapM toVolume needs
     volOutput <- localVolume (stepOutput stepName) "output"
     volCaches <- V.mapM localCache caches'

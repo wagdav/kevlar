@@ -13,12 +13,9 @@ let Action =
       , environment : List EnvVar
       }
 
-let Step = { name : Text, action : Text → Action }
-
-let Config = { steps : List Step }
+let Step = { action : Text → Action, requires : List Text }
 
 in  { Action = Action
-    , Config = Config
     , Need = Need
     , Step = Step
     , EnvVar = EnvVar

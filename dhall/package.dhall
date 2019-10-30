@@ -7,7 +7,7 @@ let fetch =
       → λ(name : Text)
       → types.Need.Fetch { src = src, name = name }
 
-let output = λ(step : types.Step) → types.Need.Output { name = step.name }
+let output = λ(step : Text) → types.Need.Output { name = step }
 
 in  { Action = { Type = types.Action, default = defaults.Action }
     , Step = { Type = types.Step, default = defaults.Step }

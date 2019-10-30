@@ -16,14 +16,4 @@ let build =
             }
         : types.Action
 
-let loadFromStep =
-        λ(step : types.Step)
-      → λ(action : types.Action)
-      → let useImage =
-              { load = Some "${step.name}/image.tar"
-              , need = action.need # [ types.Need.Output { name = step.name } ]
-              }
-
-        in  action ⫽ useImage : types.Action
-
-in  { build = build, loadFromStep = loadFromStep }
+in  { build = build }
