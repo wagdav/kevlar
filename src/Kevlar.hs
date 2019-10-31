@@ -17,6 +17,7 @@ import qualified Kevlar.EnvVar as EnvVar
 import Kevlar.Need
 import qualified Kevlar.Step as Step
 import qualified Kevlar.Action as Action
+import qualified Kevlar.Context as Context
 import Kevlar.Volume
 
 inTemporaryDirectory ::
@@ -79,7 +80,7 @@ inDockerContainer imageName imageLoad volumes shell script envVars = do
         , [imageName]
         ]
 
-mkRules :: T.Text -> Step.Step -> Rules ()
+mkRules :: Context.Context -> Step.Step -> Rules ()
 mkRules src (Step.Step name (Step.StepDef action requires)) =
   phony stepName $ do
     need $ V.toList (V.map T.unpack requires)

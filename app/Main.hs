@@ -9,6 +9,7 @@ import System.IO.Temp
 
 import Kevlar
 import Kevlar.Config
+import Kevlar.Context
 import Kevlar.Git
 import Kevlar.Step
 
@@ -28,5 +29,8 @@ shakeMain src =
       putNormal "Removing _build"
       removeFilesAfter "_build" ["//*"]
     config <- liftIO $ readConfig kevlarConfig
-    forM_ (steps config) (mkRules (T.pack src))
+    forM_ (steps config) (mkRules context)
     liftIO $ copyGitFiles src
+
+  where
+    context = Context (T.pack src)

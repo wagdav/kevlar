@@ -5,10 +5,11 @@ let docker = ../dhall/docker.dhall
 let bakeBuilderImage = docker.build "hello-world-builder"
 
 let build =
-        λ(repo : Text)
+        λ(ctx : Kevlar.Context)
       → Kevlar.Action::{
         , script = ./build.sh as Text
-        , need = [ Kevlar.fetch repo "src", Kevlar.output "bakeBuilderImage" ]
+        , need =
+            [ Kevlar.fetch ctx.repo "src", Kevlar.output "bakeBuilderImage" ]
         , image = Some "hello-world-builder"
         , load = Some "bakeBuilderImage/image.tar"
         }
@@ -16,8 +17,8 @@ let build =
 let bakeTesterImage = docker.build "hello-world-tester"
 
 let test =
-        λ ( repo
-          : Text
+        λ ( ctx
+          : Kevlar.Context
           )
       → Kevlar.Action::{
         , script =

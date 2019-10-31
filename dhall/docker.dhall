@@ -4,7 +4,7 @@ let defaults = ./../dhall/defaults.dhall
 
 let build =
         λ(image : Text)
-      → λ(repo : Text)
+      → λ(ctx : types.Context)
       →     defaults.Action
           ⫽ { image = None Text
             , script =
@@ -12,7 +12,7 @@ let build =
                 docker build -t ${image} src/docker/${image}
                 docker save -o output/image.tar ${image}
                 ''
-            , need = [ types.Need.Fetch { src = repo, name = "src" } ]
+            , need = [ types.Need.Fetch { src = ctx.repo, name = "src" } ]
             }
         : types.Action
 

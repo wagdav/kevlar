@@ -13,9 +13,12 @@ let Action =
       , environment : List EnvVar
       }
 
-let Step = { action : Text → Action, requires : List Text }
+let Context = { repo : Text }
+
+let Step = { action : Context → Action, requires : List Text }
 
 in  { Action = Action
+    , Context = Context
     , Need = Need
     , Step = Step
     , EnvVar = EnvVar

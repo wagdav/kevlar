@@ -5,11 +5,11 @@ let docker = ./dhall/docker.dhall
 let builderImage = docker.build "kevlar-builder"
 
 let build =
-        λ(repo : Text)
+        λ(ctx : Kevlar.Context)
       → Kevlar.Action::{
         , script = ./ci/build.sh as Text
         , image = Some "kevlar-builder"
-        , need = [ Kevlar.fetch repo "src", Kevlar.output "builderImage" ]
+        , need = [ Kevlar.fetch ctx.repo "src", Kevlar.output "builderImage" ]
         , load = Some "builderImage/image.tar"
         , caches = [ ".stack" ]
         }
@@ -17,7 +17,7 @@ let build =
 let publishImage = docker.build "kevlar-publish"
 
 let publish =
-        λ(repo : Text)
+        λ(ctx : Kevlar.Context)
       → Kevlar.Action::{
         , script = ./ci/publish.sh as Text
         , image = Some "kevlar-publish"

@@ -11,6 +11,7 @@ let output = λ(step : Text) → types.Need.Output { name = step }
 
 in  { Action = { Type = types.Action, default = defaults.Action }
     , Step = { Type = types.Step, default = defaults.Step }
+    , Context = types.Context
     , fetch = fetch
     , output = output
     }

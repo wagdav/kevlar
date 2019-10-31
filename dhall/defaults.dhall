@@ -10,4 +10,7 @@ let action =
       , environment = [] : List types.EnvVar
       }
 
-in  { Action = action, Step = { requires = [] : List Text } }
+in  { Action = action
+    , Context = types.Context
+    , Step = { requires = [] : List Text }
+    }

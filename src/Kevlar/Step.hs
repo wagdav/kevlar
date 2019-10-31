@@ -4,6 +4,7 @@
 module Kevlar.Step where
 
 import Kevlar.Action
+import Kevlar.Context
 
 import Dhall
 
@@ -15,7 +16,7 @@ data Step = Step
 instance FromDhall Step
 
 data StepDef = StepDef
-  { action :: Text -> Action
+  { action :: Context -> Action
   , requires :: Vector Text
   } deriving (Generic)
 
