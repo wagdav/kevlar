@@ -1,6 +1,7 @@
 .stack-work/
 kevlar.cabal
 *~
+stack.yaml.lock
 
 _build
 _shake

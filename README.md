@@ -5,18 +5,13 @@ Kevlar is an experimental CI/CD system.
 ## Example
 
 The `example` subdirectory contains a small project.  Its build rules can be
-found in the [configuration file](example/.kevlar.dhall).  You can try
+found in the [configuration file](example/.kevlar/config.hs).  You can try
 running:
 
-    cd example
-    kevlar test
+    stack exec -- kevlar-example
 
 Kevlar is self-hosting, that is it can build itself.  Take a look at [its own
-configuration file](.kevlar.dhall)
-
-## Design
-
-There's a [design document](design.md) explaining the basic concepts of Kevlar.
+configuration file](.kevlar/config.hs)
 
 
 ## Release

@@ -4,7 +4,7 @@ github:              "wagdav/kevlar"
 license:             GPL-3
 author:              "David Wagner"
 maintainer:          "wagdav@gmail.com"
-copyright:           "2018 David Wagner"
+copyright:           "2018-2020 David Wagner"
 
 extra-source-files:
 - README.md
@@ -21,24 +21,37 @@ description:         Please see the README on GitHub at <https://github.com/wagd
 
 dependencies:
 - base >= 4.7 && < 5
+- async
 - containers
-- dhall
 - directory
-- process
-- shake
-- temporary
 - filepath
-- text
-- unix
-- vector
+- hashable
+- haxl
+- process
+- temporary
 
 library:
   source-dirs: src
 
 executables:
   kevlar:
-    main:                Main.hs
-    source-dirs:         app
+    main:                config.hs
+    source-dirs:         .kevlar
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - kevlar
+    when:
+      - condition: flag(static)
+        ld-options:
+        - -static
+        - -pthread
+
+  kevlar-example:
+    main:                config.hs
+    source-dirs:         example/.kevlar
     ghc-options:
     - -threaded
     - -rtsopts
