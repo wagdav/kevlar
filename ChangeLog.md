@@ -2,6 +2,11 @@
 
 ## Unreleased changes
 
+- Complete rewrite using the Haxl library
+- Pipeline definitions are now Haskell code
+
+### Removed
+- Dhall-specific code
 - Enable the use of `toMap` Dhall builtin
 - Enable the use of the `::` operator (new in Dhall v11.0.0)
 - Split the "pipeline wiring" from the action specifications
