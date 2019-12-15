@@ -5,7 +5,7 @@ import System.FilePath
 
 -- | Build a Docker image with Kaniko
 -- See: https://github.com/GoogleContainerTools/kaniko
-build :: String -> FilePath -> [RunOption] -> Task DockerImageID
+build :: String -> FilePath -> [RunOption] -> Task DockerImage
 build destination context opts = do
   let argDockerfile = ["--dockerfile", "Dockerfile"]
   let argDestination = ["--destination", destination]

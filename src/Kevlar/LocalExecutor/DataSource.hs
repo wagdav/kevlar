@@ -11,7 +11,7 @@ module Kevlar.LocalExecutor.DataSource
   ( initGlobalState,
     LocalExecutorReq (..),
     Artifact (..),
-    DockerImageID (..),
+    DockerImage (..),
     RunOption (..),
   )
 where
@@ -29,12 +29,12 @@ import System.FilePath ((</>))
 import System.IO.Temp (createTempDirectory)
 import System.Process (callProcess)
 
-data DockerImageID
+data DockerImage
   = Repository String
   | ImageTarGz String FilePath
   deriving (Eq, Show, Generic)
 
-instance Hashable DockerImageID
+instance Hashable DockerImage
 
 newtype Artifact = HostDir FilePath
   deriving (Eq, Show, Generic)
@@ -42,7 +42,7 @@ newtype Artifact = HostDir FilePath
 instance Hashable Artifact
 
 data RunOption
-  = Image DockerImageID
+  = Image DockerImage
   | Need Artifact FilePath
   | Cache FilePath
   | Environment [(String, String)]

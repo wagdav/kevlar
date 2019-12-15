@@ -2,7 +2,7 @@ module Kevlar
   ( -- construct tasks
     RunOption (..),
     Artifact (..),
-    DockerImageID (..),
+    DockerImage (..),
     Task,
     clone,
     run,
