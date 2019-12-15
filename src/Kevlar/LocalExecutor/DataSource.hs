@@ -31,7 +31,7 @@ import System.Process (callProcess)
 
 data DockerImage
   = Repository String
-  | ImageTarGz String FilePath
+  | ImageTarGz String Artifact
   deriving (Eq, Show, Generic)
 
 instance Hashable DockerImage
@@ -132,7 +132,7 @@ fetchLocalExecutorReq workDir req@(LocalExec cmd args opts) = do
   let argCmd = cmd : args
   -- Load the provided image, if needed
   case image of
-    ImageTarGz _ tarGz -> callProcess "docker" ["load", "--input", workDir </> tarGz]
+    ImageTarGz _ (HostDir tarGz) -> callProcess "docker" ["load", "--input", workDir </> tarGz]
     _ -> return ()
   let imageName = case image of
         (Repository n) -> n

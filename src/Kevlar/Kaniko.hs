@@ -16,4 +16,4 @@ build destination context opts = do
     run
       (argDockerfile <> argDestination <> argTarPath <> argContext <> argNoPush)
       ([Image (Repository "gcr.io/kaniko-project/executor:latest")] <> opts)
-  return $ ImageTarGz destination (out </> "image.tar.gz")
+  return $ ImageTarGz destination (HostDir $ out </> "image.tar.gz")
