@@ -5,7 +5,7 @@ import System.FilePath
 
 -- | Build a Docker image with Kaniko
 -- See: https://github.com/GoogleContainerTools/kaniko
-build :: String -> FilePath -> [RunOption] -> Task Artifact
+build :: String -> FilePath -> [RunOption] -> Task DockerImageID
 build destination context opts = do
   let argDockerfile = ["--dockerfile", "Dockerfile"]
   let argDestination = ["--destination", destination]
@@ -15,5 +15,5 @@ build destination context opts = do
   HostDir out <-
     run
       (argDockerfile <> argDestination <> argTarPath <> argContext <> argNoPush)
-      ([Image "gcr.io/kaniko-project/executor:latest"] <> opts)
-  return $ HostDir $ out </> "image.tar.gz"
+      ([Image (Repository "gcr.io/kaniko-project/executor:latest")] <> opts)
+  return $ ImageTarGz destination (out </> "image.tar.gz")

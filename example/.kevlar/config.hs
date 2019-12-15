@@ -25,7 +25,7 @@ buildAndRun = do
   binary <-
     shell
       ["gcc -Wall src/hello.c -o output/hello"]
-      [Need repo "src", Image "hello-world-builder", Load builderImage]
+      [Need repo "src", Image builderImage]
   -- Run the compiled binary
   shell
     [ "#!/bin/sh",
@@ -41,8 +41,7 @@ buildAndRun = do
       "build/hello"
     ]
     [ Need binary "build",
-      Image "hello-world-tester",
-      Load testerImage,
+      Image testerImage,
       Environment [("HELLO", "world!")]
     ]
 

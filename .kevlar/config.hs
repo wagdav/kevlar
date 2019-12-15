@@ -12,8 +12,7 @@ buildKevlar = do
   shell
     ["./ci/build.sh"]
     [ Need repo "",
-      Image "kevlar-builder",
-      Load img,
+      Image img,
       Cache ".stack",
       Environment [("KEVLAR_OUTPUT", "output")]
     ]
@@ -25,8 +24,7 @@ publishKevlar binary = do
     ["./ci/publish.sh"]
     [ Need binary "build",
       Need repo "",
-      Image "kevlar-publish",
-      Load img,
+      Image img,
       Environment [("KEVLAR_VERSION", "v" <> showVersion version)],
       Secret "GITHUB_ACCESS_TOKEN"
     ]

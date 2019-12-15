@@ -29,7 +29,12 @@ import System.FilePath ((</>))
 import System.IO.Temp (createTempDirectory)
 import System.Process (callProcess)
 
-type DockerImageID = String
+data DockerImageID
+  = Repository String
+  | ImageTarGz String FilePath
+  deriving (Eq, Show, Generic)
+
+instance Hashable DockerImageID
 
 newtype Artifact = HostDir FilePath
   deriving (Eq, Show, Generic)
@@ -40,7 +45,6 @@ data RunOption
   = Image DockerImageID
   | Need Artifact FilePath
   | Cache FilePath
-  | Load Artifact
   | Environment [(String, String)]
   | Secret String
   deriving (Eq, Show, Generic)
@@ -105,9 +109,8 @@ fetchLocalExecutorReq workDir req@(Clone src) = do
   return (HostDir dest)
 fetchLocalExecutorReq workDir req@(LocalExec cmd args opts) = do
   -- parse run options
-  let load = last $ Nothing : [Just (workDir </> x) | Load (HostDir x) <- opts]
   let needs = [(artifact, dst) | Need artifact dst <- opts]
-  let image = last $ "alpine" : [x | Image x <- opts]
+  let image = last $ Repository "alpine" : [x | Image x <- opts]
   let caches = [x | Cache x <- opts]
   let envs = concat [x | Environment x <- opts]
   let secrets = [x | Secret x <- opts]
@@ -128,9 +131,12 @@ fetchLocalExecutorReq workDir req@(LocalExec cmd args opts) = do
   let argSecrets = concatMap (\e -> ["--env", e]) secrets
   let argCmd = cmd : args
   -- Load the provided image, if needed
-  case load of
-    Nothing -> return ()
-    Just x -> callProcess "docker" ["load", "--input", x]
+  case image of
+    ImageTarGz _ tarGz -> callProcess "docker" ["load", "--input", workDir </> tarGz]
+    _ -> return ()
+  let imageName = case image of
+        (Repository n) -> n
+        (ImageTarGz n _) -> n
   callProcess
     "docker"
     ( ["run", "--rm", "-i"]
@@ -140,7 +146,7 @@ fetchLocalExecutorReq workDir req@(LocalExec cmd args opts) = do
         <> argNeedVolumes
         <> argCacheVolumes
         <> argOutputVolume
-        <> [image]
+        <> [imageName]
         <> argCmd
     )
   return (HostDir out)
