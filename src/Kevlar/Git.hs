@@ -1,17 +1,17 @@
 module Kevlar.Git
-  ( copyGitFiles
-  ) where
+  ( copyFiles,
+  )
+where
 
-import Control.Monad (forM_)
-import qualified Data.Set as S
+import Data.Set (Set)
+import qualified Data.Set as Set
 import System.Directory
 import System.FilePath
 import System.Process (readProcess)
 
-copyGitFiles :: FilePath -> IO ()
-copyGitFiles dstDir = do
-  files <- lsFiles
-  forM_ files copy
+-- | Copy a Git source tree in the current directory to 'dstDir'
+copyFiles :: FilePath -> IO ()
+copyFiles dstDir = mapM_ copy =<< lsFiles
   where
     copy :: FilePath -> IO ()
     copy f = do
@@ -23,7 +23,7 @@ lsFiles = do
   tracked <- gitLs []
   deleted <- gitLs ["--deleted"]
   others <- gitLs ["--others", "--exclude-standard"]
-  return $ S.toList $ (tracked `S.difference` deleted) `S.union` others
+  return $ Set.toList $ (tracked `Set.difference` deleted) `Set.union` others
 
-gitLs :: [String] -> IO (S.Set FilePath)
-gitLs args = (S.fromList . lines) <$> readProcess "git" ("ls-files" : args) ""
+gitLs :: [String] -> IO (Set FilePath)
+gitLs args = Set.fromList . lines <$> readProcess "git" ("ls-files" : args) ""

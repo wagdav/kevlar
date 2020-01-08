@@ -23,7 +23,7 @@ import Control.Monad (void)
 import Data.Hashable (Hashable, hash, hashWithSalt)
 import GHC.Generics (Generic)
 import Haxl.Core
-import Kevlar.Git (copyGitFiles)
+import qualified Kevlar.Git as Git
 import System.Directory (createDirectoryIfMissing, getCurrentDirectory, withCurrentDirectory)
 import System.FilePath ((</>))
 import System.IO.Temp (createTempDirectory)
@@ -105,7 +105,7 @@ fetchLocalExecutorReq workDir req@(Clone src) = do
   let dest = "artifact-" <> show (hash req)
   createDirectoryIfMissing True (workDir </> dest)
   withCurrentDirectory src $
-    copyGitFiles (workDir </> dest)
+    Git.copyFiles (workDir </> dest)
   return (HostDir dest)
 fetchLocalExecutorReq workDir req@(LocalExec cmd args opts) = do
   -- parse run options
