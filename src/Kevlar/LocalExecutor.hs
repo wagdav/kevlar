@@ -6,12 +6,13 @@ module Kevlar.LocalExecutor where
 import Control.Monad
 import Data.List (uncons)
 import Haxl.Core
+import qualified Kevlar.Git as Git
 import Kevlar.LocalExecutor.DataSource
 
 type Task a = GenHaxl () () a
 
-clone :: String -> Task Artifact
-clone src = dataFetch (Clone src)
+clone :: Git.Repository -> Task Artifact
+clone repo = dataFetch (Clone repo)
 
 run :: [String] -> [RunOption] -> Task Artifact
 run args opts = case uncons args of

@@ -13,6 +13,8 @@ module Kevlar.LocalExecutor.DataSource
     Artifact (..),
     DockerImage (..),
     RunOption (..),
+    WorkDir (..),
+    CacheDir (..),
   )
 where
 
@@ -24,7 +26,7 @@ import Data.Hashable (Hashable, hash, hashWithSalt)
 import GHC.Generics (Generic)
 import Haxl.Core
 import qualified Kevlar.Git as Git
-import System.Directory (createDirectoryIfMissing, getCurrentDirectory, withCurrentDirectory)
+import System.Directory (createDirectoryIfMissing, withCurrentDirectory)
 import System.FilePath ((</>))
 import System.IO.Temp (createTempDirectory)
 import System.Process (callProcess)
@@ -53,7 +55,7 @@ instance Hashable RunOption
 
 -- | Data source IO operations
 data LocalExecutorReq a where
-  Clone :: String -> LocalExecutorReq Artifact
+  Clone :: Git.Repository -> LocalExecutorReq Artifact
   LocalExec :: String -> [String] -> [RunOption] -> LocalExecutorReq Artifact
 
 -- | Haxl data source boilderplate
@@ -75,14 +77,22 @@ instance StateKey LocalExecutorReq where
   data State LocalExecutorReq
     = LocalExecutorState
         { semaphore :: QSem,
-          workDir :: FilePath
+          workDir :: WorkDir,
+          cacheDir :: CacheDir
         }
 
-initGlobalState threads workDir = do
+newtype WorkDir = WorkDir FilePath
+  deriving (Eq, Show)
+
+newtype CacheDir = CacheDir FilePath
+  deriving (Eq, Show)
+
+initGlobalState threads workDir cacheDir = do
   sem <- newQSem threads
   return LocalExecutorState
     { semaphore = sem,
-      workDir = workDir
+      workDir = workDir,
+      cacheDir = cacheDir
     }
 
 -- | data fetch implementation
@@ -91,23 +101,21 @@ instance DataSource u LocalExecutorReq where
 
 localExecutorFetch :: State LocalExecutorReq -> Flags -> u -> PerformFetch LocalExecutorReq
 localExecutorFetch LocalExecutorState {..} _flags _user =
-  BackgroundFetch $ mapM_ (fetchAsync semaphore workDir)
+  BackgroundFetch $ mapM_ (fetchAsync semaphore workDir cacheDir)
 
-fetchAsync sem workDir (BlockedFetch req rvar) =
+fetchAsync sem workDir cacheDir (BlockedFetch req rvar) =
   void $ async $ bracket_ (waitQSem sem) (signalQSem sem) $ do
-    e <- Control.Exception.try $ fetchLocalExecutorReq workDir req
+    e <- Control.Exception.try $ fetchLocalExecutorReq workDir cacheDir req
     case e of
       Left ex -> putFailure rvar (ex :: SomeException)
       Right a -> putSuccess rvar a
 
-fetchLocalExecutorReq :: FilePath -> LocalExecutorReq a -> IO a
-fetchLocalExecutorReq workDir req@(Clone src) = do
+fetchLocalExecutorReq :: WorkDir -> CacheDir -> LocalExecutorReq a -> IO a
+fetchLocalExecutorReq (WorkDir workDir) _cacheDir req@(Clone repository) = do
   let dest = "artifact-" <> show (hash req)
-  createDirectoryIfMissing True (workDir </> dest)
-  withCurrentDirectory src $
-    Git.copyFiles (workDir </> dest)
+  Git.clone repository (workDir </> dest)
   return (HostDir dest)
-fetchLocalExecutorReq workDir req@(LocalExec cmd args opts) = do
+fetchLocalExecutorReq (WorkDir workDir) (CacheDir cacheDir) req@(LocalExec cmd args opts) = do
   -- parse run options
   let needs = [(artifact, dst) | Need artifact dst <- opts]
   let image = last $ Repository "alpine" : [x | Image x <- opts]
@@ -115,8 +123,6 @@ fetchLocalExecutorReq workDir req@(LocalExec cmd args opts) = do
   let envs = concat [x | Environment x <- opts]
   let secrets = [x | Secret x <- opts]
   -- create cache directory
-  cwd <- getCurrentDirectory
-  let cacheDir = cwd </> "_build" </> "caches"
   createDirectoryIfMissing True cacheDir
   -- create output directory
   let out = "output-" <> show (hash req)
