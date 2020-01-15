@@ -41,15 +41,11 @@ kevlar task = do
 
 parse :: [String] -> IO Git.Repository
 parse [] = return $ Git.WorkingCopy "."
-parse [url] = do
-  local <- doesDirectoryExist url
-  return $
-    if local
-      then Git.WorkingCopy url
-      else Git.Url url Nothing
-parse (url : ref : xs) = do
-  local <- doesDirectoryExist url
-  return $
-    if local
-      then Git.WorkingCopy url
-      else Git.Url url (Just ref)
+parse [url] = mkRepository url Nothing <$> doesDirectoryExist url
+parse (url : ref : xs) = mkRepository url (Just ref) <$> doesDirectoryExist url
+
+mkRepository :: String -> Maybe Git.Revision -> Bool -> Git.Repository
+mkRepository url revision local =
+  if local
+    then Git.WorkingCopy url
+    else Git.Url url revision
