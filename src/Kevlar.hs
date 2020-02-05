@@ -13,12 +13,13 @@ module Kevlar
   )
 where
 
-import Control.Monad (void)
+import Control.Exception (SomeException, try)
 import Haxl.Core
-import Haxl.Prelude
 import qualified Kevlar.Git as Git
+import qualified Kevlar.GitHub as GitHub
 import Kevlar.LocalExecutor
 import Kevlar.LocalExecutor.DataSource
+import Kevlar.Status
 import System.Directory (doesDirectoryExist, getCurrentDirectory)
 import System.Environment (getArgs)
 import System.FilePath ((</>))
@@ -27,7 +28,13 @@ import System.IO.Temp (withSystemTempDirectory)
 kevlarMain :: (Git.Repository -> Task a) -> IO ()
 kevlarMain task = do
   repo <- parse =<< getArgs
-  void $ kevlar (task repo)
+  GitHub.status repo Pending
+  e <- Control.Exception.try $ kevlar (task repo)
+  case e of
+    Left ex -> do
+      print (ex :: SomeException)
+      GitHub.status repo Failure
+    Right _ -> GitHub.status repo Success
 
 -- Run a kevlar task
 kevlar :: Task a -> IO a

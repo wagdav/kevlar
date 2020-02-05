@@ -22,13 +22,17 @@ description:         Please see the README on GitHub at <https://github.com/wagd
 dependencies:
 - base >= 4.7 && < 5
 - async
+- bytestring
 - containers
 - directory
 - filepath
+- github
 - hashable
 - haxl
+- parsec
 - process
 - temporary
+- text
 
 library:
   source-dirs: src

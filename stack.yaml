@@ -2,4 +2,6 @@ resolver: lts-14.7
 
 packages:
 - .
-extra-deps: []
+extra-deps:
+- github-0.24
+- binary-instances-1  # via github
