@@ -9,7 +9,7 @@ type Revision = String
 
 data Repository
   = WorkingCopy FilePath
-  | Url String (Maybe Revision)
+  | Url String Revision
   deriving (Eq, Show, Generic)
 
 instance Hashable Repository

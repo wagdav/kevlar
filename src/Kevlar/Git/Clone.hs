@@ -18,7 +18,7 @@ clone repo dest = do
     WorkingCopy src -> withCurrentDirectory src (copyFiles dest)
     Url url revision -> do
       callProcess "git" ["clone", url, dest]
-      maybe (return ()) gitReset revision
+      gitReset revision
   where
     gitReset x =
       withCurrentDirectory dest $
