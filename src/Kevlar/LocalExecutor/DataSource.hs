@@ -152,6 +152,7 @@ fetchLocalExecutorReq (WorkDir workDir) (CacheDir cacheDir) req@(LocalExec cmd a
         <> argNeedVolumes
         <> argCacheVolumes
         <> argOutputVolume
+        <> ["--net=host"]
         <> [imageName]
         <> argCmd
     )
