@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+- Notifications using GitHub Status API
+
+## [0.0.4] - 2019-12-14
+
 - Complete rewrite using the Haxl library
 - Pipeline definitions are now Haskell code
 
