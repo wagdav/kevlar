@@ -24,23 +24,13 @@ buildAndRun repo = do
   -- Compile the source code
   binary <-
     shell
-      ["gcc -Wall src/hello.c -o output/hello"]
-      [Need src "src", Image builderImage]
+      ["scripts/build.sh output"]
+      [Need src "", Image builderImage]
   -- Run the compiled binary
   shell
-    [ "#!/bin/sh",
-      "set -e",
-      "echo \"Artifacts from previous steps are available in this container\"",
-      "tree -L 1",
-      "",
-      "echo",
-      "echo \"Environment variables can be specified in the step: \\$HELLO=$HELLO\"",
-      "",
-      "echo",
-      "echo \"Running the output artifacts from the 'build' step\"",
-      "build/hello"
-    ]
-    [ Need binary "build",
+    ["scripts/run.sh build"]
+    [ Need src "",
+      Need binary "build",
       Image testerImage,
       Environment [("HELLO", "world!")]
     ]
