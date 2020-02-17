@@ -3,6 +3,10 @@
 ## Unreleased changes
 
 - Notifications using GitHub Status API
+- Kaniko caches Docker images in a local Docker registry.  This can be started by:
+  ```
+  docker run -d -p 5000:5000 --restart=always --name registry registry:2
+  ```
 
 ## [0.0.4] - 2019-12-14
 
