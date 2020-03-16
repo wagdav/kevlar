@@ -26,7 +26,7 @@ import Data.Hashable (Hashable, hash, hashWithSalt)
 import GHC.Generics (Generic)
 import Haxl.Core
 import qualified Kevlar.Git as Git
-import System.Directory (createDirectoryIfMissing, withCurrentDirectory)
+import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 import System.IO.Temp (createTempDirectory)
 import System.Process (callProcess)
