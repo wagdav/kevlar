@@ -39,6 +39,21 @@ library:
 
 executables:
   kevlar:
+    main:                Main.hs
+    source-dirs:         bin
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - kevlar
+    when:
+      - condition: flag(static)
+        ld-options:
+        - -static
+        - -pthread
+
+  kevlar-config:
     main:                config.hs
     source-dirs:         .kevlar
     ghc-options:

@@ -10,6 +10,7 @@ module Kevlar
     -- run Tasks
     kevlar,
     kevlarMain,
+    kevlarMainWith,
   )
 where
 
@@ -20,16 +21,23 @@ import qualified Kevlar.GitHub as GitHub
 import Kevlar.LocalExecutor
 import Kevlar.LocalExecutor.DataSource
 import Kevlar.Status
-import System.Directory (doesDirectoryExist, getCurrentDirectory)
+import System.Directory (doesDirectoryExist, getCurrentDirectory, withCurrentDirectory)
 import System.Environment (getArgs)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
 
 kevlarMain :: (Git.Repository -> Task a) -> IO ()
-kevlarMain task = do
+kevlarMain task = kevlarMainWith task (\_ _ -> return ())
+
+kevlarMainWith :: (Git.Repository -> Task a) -> (Git.Repository -> a -> IO ()) -> IO ()
+kevlarMainWith task action = do
   repo <- parse =<< getArgs
   GitHub.status repo Pending
-  e <- Control.Exception.try $ kevlar (task repo)
+  e <- Control.Exception.try
+    $ withSystemTempDirectory "kevlar"
+    $ \workDir -> do
+      out <- kevlar workDir (task repo)
+      withCurrentDirectory workDir $ action repo out
   case e of
     Left ex -> do
       print (ex :: SomeException)
@@ -37,14 +45,13 @@ kevlarMain task = do
     Right _ -> GitHub.status repo Success
 
 -- Run a kevlar task
-kevlar :: Task a -> IO a
-kevlar task = do
+kevlar :: FilePath -> Task a -> IO a
+kevlar workDir task = do
   cwd <- getCurrentDirectory
   let cacheDir = cwd </> "_build" </> "caches"
-  withSystemTempDirectory "kevlar" $ \workDir -> do
-    state <- initGlobalState 10 (WorkDir workDir) (CacheDir cacheDir)
-    env <- initEnv (stateSet state stateEmpty) ()
-    runHaxl env task
+  state <- initGlobalState 10 (WorkDir workDir) (CacheDir cacheDir)
+  env <- initEnv (stateSet state stateEmpty) ()
+  runHaxl env task
 
 parse :: [String] -> IO Git.Repository
 parse [] = return $ Git.WorkingCopy "."
